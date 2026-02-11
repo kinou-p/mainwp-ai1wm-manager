@@ -1,0 +1,20 @@
+# Build artifacts
+*.zip
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencies
+node_modules/
+vendor/
+
+# Logs
+*.log
