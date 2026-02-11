@@ -146,6 +146,8 @@ class MainWP_AI1WM_Manager
             $params
         );
 
+        $method = 'Unknown';
+
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[AI1WM Manager] send_to_child: ' . $action . ' for site ' . $site_id);
         }
@@ -155,14 +157,18 @@ class MainWP_AI1WM_Manager
 
             // Method 1: Use MainWP_Connect directly (most reliable for non-licensed extensions).
             if (class_exists('\MainWP\Dashboard\MainWP_DB') && class_exists('\MainWP\Dashboard\MainWP_Connect')) {
-                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using Method 1 (MainWP_Connect)');
+                $method = 'Method 1 (MainWP_Connect)';
+                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using ' . $method);
                 
                 $website = \MainWP\Dashboard\MainWP_DB::instance()->get_website_by_id($site_id);
                 if ($website) {
+                    // Pass null for function (default) and explicit file path for validation
                     $result = \MainWP\Dashboard\MainWP_Connect::fetch_url_authed(
                         $website,
                         'extra_execution',
-                        $post_data
+                        $post_data,
+                        null, 
+                        MAINWP_AI1WM_MANAGER_FILE
                     );
                 } else {
                     return array('error' => 'Site ID ' . $site_id . ' not found in MainWP database.');
@@ -170,14 +176,17 @@ class MainWP_AI1WM_Manager
             }
             // Method 2: Legacy class names (older MainWP versions).
             elseif (class_exists('MainWP_DB') && class_exists('MainWP_Connect')) {
-                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using Method 2 (Legacy)');
+                $method = 'Method 2 (Legacy)';
+                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using ' . $method);
 
                 $website = MainWP_DB::instance()->get_website_by_id($site_id);
                 if ($website) {
                     $result = MainWP_Connect::fetch_url_authed(
                         $website,
                         'extra_execution',
-                        $post_data
+                        $post_data,
+                        null,
+                        MAINWP_AI1WM_MANAGER_FILE
                     );
                 } else {
                     return array('error' => 'Site ID ' . $site_id . ' not found in MainWP database (legacy).');
@@ -185,7 +194,8 @@ class MainWP_AI1WM_Manager
             }
             // Method 3: Fallback to apply_filters.
             else {
-                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using Method 3 (apply_filters)');
+                $method = 'Method 3 (apply_filters)';
+                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using ' . $method);
 
                 $result = apply_filters(
                     'mainwp_fetchurlauthed',
@@ -205,7 +215,7 @@ class MainWP_AI1WM_Manager
                  $error_message .= ' (MainWP Dashboard verification failed. Ensure the extension is properly registered or the file path is correct.)';
             }
             
-            return array('error' => 'MainWP Request Failed: ' . $error_message . ' [Action: ' . $action . ']');
+            return array('error' => 'MainWP Request Failed: ' . $error_message . ' [Action: ' . $action . '] [Method: ' . $method . ']');
         }
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
