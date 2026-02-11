@@ -395,7 +395,9 @@
             $('#ai1wm-progress-text').text(done + ' / ' + total);
             if (done >= total) {
                 setTimeout(function () { $prog.slideUp(200); }, 2000);
-                notify('✅ Téléchargement : ' + ok + '/' + total + ' lancé(s).', ok === total ? 'success' : 'info');                loadLogs(); // Refresh logs after bulk download completes            }
+                notify('✅ Téléchargement : ' + ok + '/' + total + ' lancé(s).', ok === total ? 'success' : 'info');
+                loadLogs(); // Refresh logs after bulk download completes
+            }
         }
 
         function doDownload(siteId) {
