@@ -1,6 +1,6 @@
 # MainWP AI1WM Backup Manager
 
-[![Version](https://img.shields.io/badge/version-0.2.1-green.svg)](https://github.com/kinou-p/mainwp-ai1wm-manager/releases)
+[![Version](https://img.shields.io/badge/version-0.2.2-green.svg)](https://github.com/kinou-p/mainwp-ai1wm-manager/releases)
 [![MainWP](https://img.shields.io/badge/MainWP-Compatible-orange.svg)](https://mainwp.com/)
 
 **Manage All-in-One WP Migration backups on child sites directly from your MainWP Dashboard.**

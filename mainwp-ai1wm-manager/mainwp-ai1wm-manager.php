@@ -3,7 +3,7 @@
  * Plugin Name: MainWP AI1WM Backup Manager
  * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Manage All-in-One WP Migration backups on child sites directly from the MainWP Dashboard.
- * Version:     0.2.1
+ * Version:     0.2.2
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MAINWP_AI1WM_MANAGER_VERSION', '0.2.1');
+define('MAINWP_AI1WM_MANAGER_VERSION', '0.2.2');
 define('MAINWP_AI1WM_MANAGER_FILE', __FILE__);
 define('MAINWP_AI1WM_MANAGER_DIR', plugin_dir_path(__FILE__));
 define('MAINWP_AI1WM_MANAGER_URL', plugin_dir_url(__FILE__));
@@ -71,6 +71,7 @@ class MainWP_AI1WM_Manager
     private function __construct()
     {
         add_action('admin_menu', array($this, 'register_menu'), 200);
+        add_action('admin_menu', array($this, 'add_to_left_menu'), 999);
 
         // Initialize sub-components
         MainWP_AI1WM_Logger::get_instance();
@@ -79,13 +80,38 @@ class MainWP_AI1WM_Manager
 
     public function register_menu()
     {
+        // Add to main MainWP menu
         add_submenu_page(
             'mainwp_tab',
             __('AI1WM Backup Manager', 'mainwp-ai1wm-manager'),
-            __('AI1WM Backups', 'mainwp-ai1wm-manager'),
+            __('AI1WM Manager', 'mainwp-ai1wm-manager'),
             'manage_options',
             'mainwp-ai1wm-manager',
             array($this, 'render_page')
+        );
+    }
+    
+    /**
+     * Add to MainWP left menu under Extensions > Backups category
+     */
+    public function add_to_left_menu()
+    {
+        // Check if MainWP_Menu class exists
+        if (!class_exists('\MainWP\Dashboard\MainWP_Menu')) {
+            return;
+        }
+        
+        // Add to left menu under Extensions > Backups category
+        \MainWP\Dashboard\MainWP_Menu::add_left_menu(
+            array(
+                'title'         => __('AI1WM Manager', 'mainwp-ai1wm-manager'),
+                'parent_key'    => 'Extensions-Mainwp-Backups',
+                'slug'          => 'mainwp-ai1wm-manager',
+                'href'          => 'admin.php?page=mainwp-ai1wm-manager',
+                'icon'          => '<i class="cloud icon"></i>',
+                'leftsub_order_level2' => 99,
+            ),
+            2
         );
     }
 
@@ -120,17 +146,9 @@ class MainWP_AI1WM_Manager
         );
 
         wp_enqueue_script(
-            'ai1wm-i18n-js',
-            MAINWP_AI1WM_MANAGER_URL . 'assets/js/i18n.js',
-            array('jquery'),
-            MAINWP_AI1WM_MANAGER_VERSION,
-            true
-        );
-
-        wp_enqueue_script(
             'ai1wm-dashboard-js',
             MAINWP_AI1WM_MANAGER_URL . 'assets/js/dashboard.js',
-            array('jquery', 'ai1wm-i18n-js'),
+            array('jquery'),
             MAINWP_AI1WM_MANAGER_VERSION,
             true
         );

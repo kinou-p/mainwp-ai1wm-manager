@@ -1,5 +1,13 @@
 <div class="ai1wm-wrap">
 
+    <!-- Back to Dashboard Button -->
+    <div style="margin-bottom: 16px;">
+        <a href="<?php echo esc_url(admin_url('admin.php?page=mainwp_tab')); ?>" class="ai1wm-btn ai1wm-btn-ghost" style="display: inline-flex; align-items: center; gap: 8px;">
+            <span class="material-icons-round" style="font-size: 18px;">arrow_back</span>
+            MainWP Dashboard
+        </a>
+    </div>
+
     <!-- Header -->
     <div class="ai1wm-header">
         <div class="ai1wm-header-left">
@@ -15,28 +23,23 @@
                 </div>
             </div>
         </div>
-        
-        <div class="ai1wm-lang-selector">
-            <button class="ai1wm-lang-btn active" data-lang="fr" title="Français">🇫🇷</button>
-            <button class="ai1wm-lang-btn" data-lang="en" title="English">🇬🇧</button>
-        </div>
 
         <?php if (!empty($sites)): ?>
             <div class="ai1wm-toolbar">
                 <span class="ai1wm-selected-count" id="ai1wm-selected-count">
-                    <span class="count-num">0</span> <span data-i18n="selected">sélectionné(s)</span>
+                    <span class="count-num">0</span> <span>selected</span>
                 </span>
-                <button class="ai1wm-btn ai1wm-btn-outline" id="ai1wm-refresh-all" data-i18n="refresh_all">
+                <button class="ai1wm-btn ai1wm-btn-outline" id="ai1wm-refresh-all">
                     <span class="material-icons-round">refresh</span>
-                    Rafraîchir tout
+                    Refresh All
                 </button>
-                <button class="ai1wm-btn ai1wm-btn-secondary" id="ai1wm-bulk-download" disabled data-i18n="download_latest">
+                <button class="ai1wm-btn ai1wm-btn-secondary" id="ai1wm-bulk-download" disabled>
                     <span class="material-icons-round">download</span>
-                    Télécharger derniers backups
+                    Download Latest Backups
                 </button>
-                <button class="ai1wm-btn ai1wm-btn-primary" id="ai1wm-bulk-backup" disabled data-i18n="create_backups">
+                <button class="ai1wm-btn ai1wm-btn-primary" id="ai1wm-bulk-backup" disabled>
                     <span class="material-icons-round">backup</span>
-                    Créer backups
+                    Create Backups
                 </button>
             </div>
         <?php endif; ?>
@@ -67,7 +70,7 @@
             </div>
             <div class="ai1wm-stat-card glass-panel">
                 <div>
-                    <div class="stat-label">Dernier Backup</div>
+                    <div class="stat-label">Last Backup</div>
                     <div class="stat-value" id="ai1wm-stat-last" style="font-size:16px;">–</div>
                 </div>
                 <div class="ai1wm-stat-icon green">
@@ -76,7 +79,7 @@
             </div>
             <div class="ai1wm-stat-card glass-panel">
                 <div>
-                    <div class="stat-label">Taille Totale</div>
+                    <div class="stat-label">Total Size</div>
                     <div class="stat-value" id="ai1wm-stat-total-size" style="font-size:18px;">–</div>
                 </div>
                 <div class="ai1wm-stat-icon blue">
@@ -88,7 +91,7 @@
 
     <!-- Bulk Progress -->
     <div class="ai1wm-bulk-progress glass-panel" id="ai1wm-bulk-progress">
-        <h4 id="ai1wm-bulk-title">Opération en cours…</h4>
+        <h4 id="ai1wm-bulk-title">Operation in progress…</h4>
         <div class="ai1wm-progress-bar">
             <div class="ai1wm-progress-fill" id="ai1wm-progress-fill"></div>
         </div>
@@ -98,7 +101,7 @@
     <?php if (empty($sites)): ?>
         <div class="ai1wm-empty glass-panel">
             <span class="material-icons-round">cloud_off</span>
-            <?php esc_html_e('Aucun site enfant trouvé.', 'mainwp-ai1wm-manager'); ?>
+            <?php esc_html_e('No child sites found.', 'mainwp-ai1wm-manager'); ?>
         </div>
     <?php else: ?>
         <div class="ai1wm-table-wrap glass-panel">
@@ -145,7 +148,7 @@
                                         <div class="site-name">
                                             <?php echo esc_html($site['name']); ?>
                                         </div>
-                                        <div class="site-status">Connecté</div>
+                                        <div class="site-status">Connected</div>
                                     </div>
                                 </div>
                             </td>
@@ -170,11 +173,11 @@
                             <td>
                                 <div class="ai1wm-actions">
                                     <button class="ai1wm-btn ai1wm-btn-icon-primary ai1wm-btn-create"
-                                        data-site-id="<?php echo esc_attr($site['id']); ?>" title="Créer un backup">
+                                        data-site-id="<?php echo esc_attr($site['id']); ?>" title="Create backup">
                                         <span class="material-icons-round">backup</span>
                                     </button>
                                     <button class="ai1wm-btn ai1wm-btn-ghost ai1wm-btn-list"
-                                        data-site-id="<?php echo esc_attr($site['id']); ?>" title="Rafraîchir les backups">
+                                        data-site-id="<?php echo esc_attr($site['id']); ?>" title="Refresh backups">
                                         <span class="material-icons-round">refresh</span>
                                     </button>
                                 </div>
@@ -186,10 +189,10 @@
                                     <div class="ai1wm-backups-inner">
                                         <h4>
                                             <span class="material-icons-round" style="font-size:16px;">folder_open</span>
-                                            <?php printf(esc_html__('Fichiers .wpress — %s', 'mainwp-ai1wm-manager'), esc_html($site['name'])); ?>
+                                            <?php printf(esc_html__('.wpress Files — %s', 'mainwp-ai1wm-manager'), esc_html($site['name'])); ?>
                                         </h4>
                                         <div class="ai1wm-backups-content">
-                                            <span class="ai1wm-spinner ai1wm-spinner-dark"></span> Chargement…
+                                            <span class="ai1wm-spinner ai1wm-spinner-dark"></span> Loading…
                                         </div>
                                     </div>
                                 </div>
@@ -206,15 +209,15 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h3 style="margin:0;font-size:16px;color:#fff;display:flex;align-items:center;gap:8px;">
                 <span class="material-icons-round" style="color:var(--ai-text-muted);">history</span>
-                Journal d'activité
+                Activity Logs
             </h3>
             <div style="display:flex;gap:8px;">
                 <button class="ai1wm-btn ai1wm-btn-ghost ai1wm-btn-sm" id="ai1wm-refresh-logs"
-                    title="Rafraîchir les logs">
+                    title="Refresh logs">
                     <span class="material-icons-round">refresh</span>
                 </button>
                 <button class="ai1wm-btn ai1wm-btn-ghost ai1wm-btn-sm" id="ai1wm-clear-logs"
-                    title="Effacer l'historique">
+                    title="Clear history">
                     <span class="material-icons-round">delete_sweep</span>
                 </button>
             </div>
@@ -225,7 +228,7 @@
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
                 <tbody id="ai1wm-logs-body">
                     <tr>
-                        <td style="padding:20px;text-align:center;color:var(--ai-text-dim);">Chargement...</td>
+                        <td style="padding:20px;text-align:center;color:var(--ai-text-dim);">Loading...</td>
                     </tr>
                 </tbody>
             </table>

@@ -3,13 +3,6 @@
 
     var nonce = ai1wm_vars.nonce;
     var backupsCache = {}; // site_id -> backups array
-    var i18n = window.AI1WM_i18n || { t: function(k) { return k; } };
-
-    /* ==== Language Selector ==== */
-    $('.ai1wm-lang-btn').on('click', function() {
-        var lang = $(this).data('lang');
-        i18n.setLang(lang);
-    });
 
     /* ==== Retry Logic with Exponential Backoff ==== */
     function ajaxWithRetry(options, maxRetries) {
@@ -90,7 +83,7 @@
         }
 
         if (!backups || backups.length === 0) {
-            $content.html('<p style="color:var(--ai-text-dim);font-style:italic;margin:0;">Aucune sauvegarde sur ce site.</p>');
+            $content.html('<p style="color:var(--ai-text-dim);font-style:italic;margin:0;">No backups on this site.</p>');
             return;
         }
 
@@ -175,7 +168,7 @@
     /* ==== AJAX: List Backups ==== */
     function loadBackups(siteId, callback) {
         var $content = $('.ai1wm-backups-row[data-site-id="' + siteId + '"] .ai1wm-backups-content');
-        $content.html('<span class="ai1wm-spinner ai1wm-spinner-dark"></span> Chargement…');
+        $content.html('<span class="ai1wm-spinner ai1wm-spinner-dark"></span> Loading…');
 
         ajaxWithRetry({
             url: ajaxurl,
@@ -196,18 +189,18 @@
                     $toggle.removeClass('open');
                     $('.ai1wm-backups-row[data-site-id="' + siteId + '"]').slideUp(150);
 
-                    $content.html('<p style="color:var(--ai-danger);">Plugin enfant non détecté sur le site.</p>');
-                    notify('Plugin enfant manquant.', 'error');
+                    $content.html('<p style="color:var(--ai-danger);">Child plugin not detected on this site.</p>');
+                    notify('Child plugin missing.', 'error');
                 } else {
-                    $content.html('<p style="color:var(--ai-danger);">Erreur : ' + esc(res.data || 'Inconnue') + '</p>');
+                    $content.html('<p style="color:var(--ai-danger);">Error: ' + esc(res.data || 'Unknown') + '</p>');
                 }
             }
             if (callback) callback(res.success);
         }).fail(function (xhr, status, error) {
             if (status === 'timeout') {
-                $content.html('<p style="color:var(--ai-danger);">⏱️ Timeout - Le site ne répond pas.</p>');
+                $content.html('<p style="color:var(--ai-danger);">⏱️ Timeout - Site not responding.</p>');
             } else {
-                $content.html('<p style="color:var(--ai-danger);">❌ Erreur réseau: ' + error + '</p>');
+                $content.html('<p style="color:var(--ai-danger);">❌ Network error: ' + error + '</p>');
             }
             if (callback) callback(false);
         });
@@ -230,7 +223,7 @@
     $(document).on('click', '.ai1wm-btn-create', function (e) {
         e.preventDefault();
         var $btn = $(this), siteId = $btn.data('site-id');
-        if (!confirm('Lancer une nouvelle sauvegarde sur ce site ?')) return;
+        if (!confirm('Create a new backup on this site?')) return;
         btnLoading($btn, true);
 
         // Get current backup count before starting
@@ -258,13 +251,13 @@
                 $statusBadge.remove();
                 
                 if (res.success) {
-                    notify('✅ Sauvegarde lancée ! La création peut prendre jusqu\'à 20 minutes...', 'success');
+                    notify('✅ Backup started! Creation can take up to 20 minutes...', 'success');
                     loadLogs(); // Refresh logs immediately
                     
                     // Start intelligent polling
                     startBackupPolling(siteId, initialBackupCount, $row);
                 } else {
-                    notify('❌ ' + (res.data || 'Erreur'), 'error');
+                    notify('❌ ' + (res.data || 'Error'), 'error');
                     loadLogs(); // Refresh logs even on error
                 }
             },
@@ -273,11 +266,11 @@
                 $statusBadge.remove();
                 
                 if (status === 'timeout') {
-                    notify('⏱️ Timeout - La sauvegarde peut toujours être en cours. Vérifiez dans quelques minutes.', 'info');
+                    notify('⏱️ Timeout - Backup may still be in progress. Check in a few minutes.', 'info');
                     // Still try to refresh after timeout
                     setTimeout(function() { loadBackups(siteId); }, 60000);
                 } else {
-                    notify('❌ Erreur réseau: ' + error, 'error');
+                    notify('❌ Network error: ' + error, 'error');
                 }
             }
         });
@@ -312,7 +305,7 @@
             if (elapsed > maxDuration) {
                 clearInterval(pollTimer);
                 $processingBadge.remove();
-                notify('⏱️ Timeout : Aucun nouveau backup après 20 minutes. Vérifiez manuellement.', 'error');
+                notify('⏱️ Timeout: No new backup after 20 minutes. Check manually.', 'error');
                 loadLogs();
                 return;
             }
@@ -338,7 +331,7 @@
                         var elapsedSec = Math.floor((elapsed % 60000) / 1000);
                         var timeMsg = elapsedMin > 0 ? elapsedMin + 'min ' + elapsedSec + 's' : elapsedSec + 's';
                         
-                        notify('✅ Backup terminé avec succès ! (' + timeMsg + ')', 'success');
+                        notify('✅ Backup completed successfully! (' + timeMsg + ')', 'success');
                         loadLogs();
                     }
                 }
@@ -358,7 +351,7 @@
     $(document).on('click', '.ai1wm-btn-delete', function (e) {
         e.preventDefault();
         var $btn = $(this), siteId = $btn.data('site-id'), file = $btn.data('file');
-        if (!confirm('Supprimer « ' + file + ' » ?')) return;
+        if (!confirm('Delete "' + file + '"?')) return;
         btnLoading($btn, true);
 
         $.post(ajaxurl, {
@@ -369,17 +362,17 @@
         }, function (res) {
             btnLoading($btn, false);
             if (res.success) {
-                notify('✅ Fichier supprimé !', 'success');
+                notify('✅ File deleted!', 'success');
                 delete backupsCache[siteId];
                 loadBackups(siteId);
                 loadLogs(); // Refresh logs after deletion
             } else {
-                notify('❌ ' + (res.data || 'Erreur'), 'error');
+                notify('❌ ' + (res.data || 'Error'), 'error');
                 loadLogs(); // Refresh logs even on error
             }
         }).fail(function () {
             btnLoading($btn, false);
-            notify('❌ Erreur réseau.', 'error');
+            notify('❌ Network error.', 'error');
             loadLogs(); // Refresh logs on network error
         });
     });
@@ -406,16 +399,16 @@
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    notify('✅ Téléchargement lancé !', 'success');
+                    notify('✅ Download started!', 'success');
                 } catch (err) {
-                    notify('❌ Erreur lors du téléchargement: ' + err.message, 'error');
+                    notify('❌ Download error: ' + err.message, 'error');
                 }
             } else {
-                notify('❌ ' + (res.data || 'Téléchargement impossible'), 'error');
+                notify('❌ ' + (res.data || 'Download failed'), 'error');
             }
         }).fail(function () {
             btnLoading($btn, false);
-            notify('❌ Erreur réseau.', 'error');
+            notify('❌ Network error.', 'error');
         });
     });
 
@@ -423,10 +416,10 @@
     $('#ai1wm-bulk-backup').on('click', function () {
         var ids = getSelected();
         if (!ids.length) return;
-        if (!confirm('Créer un backup sur ' + ids.length + ' site(s) sélectionné(s) ?\n\n⚠️ Cela peut prendre plusieurs minutes par site.')) return;
+        if (!confirm('Create backup on ' + ids.length + ' selected site(s)?\n\n⚠️ This may take several minutes per site.')) return;
 
         var $prog = $('#ai1wm-bulk-progress').show();
-        $('#ai1wm-bulk-title').text('Création de backups en cours…');
+        $('#ai1wm-bulk-title').text('Creating backups…');
         var initiated = 0, total = ids.length, completed = 0, errors = [];
         var concurrency = 3; // Process 3 sites at a time
         var queue = ids.slice();
@@ -437,16 +430,16 @@
             var pct = Math.round((completed / total) * 100);
             $('#ai1wm-progress-fill').css('width', pct + '%');
             $('#ai1wm-progress-text').text(
-                'Terminés: ' + completed + ' / ' + total + 
-                (initiated > completed ? ' (En cours: ' + (initiated - completed) + ')' : '')
+                'Completed: ' + completed + ' / ' + total + 
+                (initiated > completed ? ' (In progress: ' + (initiated - completed) + ')' : '')
             );
             
             if (completed >= total) {
                 setTimeout(function () { $prog.slideUp(200); }, 3000);
                 var successCount = total - errors.length;
-                var msg = '✅ Backups terminés : ' + successCount + '/' + total + ' réussi(s).';
+                var msg = '✅ Backups completed: ' + successCount + '/' + total + ' successful.';
                 if (errors.length > 0) {
-                    msg += '\n❌ Erreurs: ' + errors.join(', ');
+                    msg += '\n❌ Errors: ' + errors.join(', ');
                 }
                 notify(msg, errors.length === 0 ? 'success' : 'error');
                 loadLogs();
@@ -603,10 +596,10 @@
         var ids = getSelected();
         if (!ids.length) return;
 
-        if (!confirm('Télécharger le dernier backup de ' + ids.length + ' site(s) sélectionné(s) ?')) return;
+        if (!confirm('Download latest backup from ' + ids.length + ' selected site(s)?')) return;
 
         var $prog = $('#ai1wm-bulk-progress').show();
-        $('#ai1wm-bulk-title').text('Téléchargement des derniers backups…');
+        $('#ai1wm-bulk-title').text('Downloading latest backups…');
         var done = 0, total = ids.length, ok = 0, errors = 0;
 
         function updateProgress() {
@@ -617,8 +610,8 @@
             if (done >= total) {
                 setTimeout(function () { $prog.slideUp(200); }, 2000);
                 var msg = ok === total 
-                    ? '✅ Téléchargement lancé pour ' + ok + ' backup(s).' 
-                    : '⚠️ Téléchargement : ' + ok + ' réussi(s), ' + errors + ' erreur(s).';
+                    ? '✅ Download started for ' + ok + ' backup(s).' 
+                    : '⚠️ Download: ' + ok + ' successful, ' + errors + ' error(s).';
                 notify(msg, ok === total ? 'success' : 'warning');
                 loadLogs();
             }
@@ -690,7 +683,7 @@
                 done++;
                 if (done >= total) {
                     btnLoading($btn, false);
-                    notify('✅ Toutes les listes rafraîchies.', 'success');
+                    notify('✅ All lists refreshed.', 'success');
                 }
             });
         });
@@ -707,7 +700,7 @@
             if (res.success) {
                 var logs = res.data;
                 if (!logs || logs.length === 0) {
-                    $container.html('<tr><td style="padding:20px;text-align:center;color:var(--ai-text-dim);">Aucun log disponible.</td></tr>');
+                    $container.html('<tr><td style="padding:20px;text-align:center;color:var(--ai-text-dim);">No logs available.</td></tr>');
                     return;
                 }
 
@@ -736,7 +729,7 @@
                 });
                 $container.html(html);
             } else {
-                $container.html('<tr><td style="padding:20px;text-align:center;color:var(--ai-danger);">Erreur chargement logs.</td></tr>');
+                $container.html('<tr><td style="padding:20px;text-align:center;color:var(--ai-danger);">Error loading logs.</td></tr>');
             }
         });
     }
@@ -770,7 +763,7 @@
     // Clear logs button
     $('#ai1wm-clear-logs').on('click', function (e) {
         e.preventDefault();
-        if (!confirm('Voulez-vous vraiment effacer l\'historique ?')) return;
+        if (!confirm('Do you really want to clear the history?')) return;
 
         $.post(ajaxurl, {
             action: 'ai1wm_clear_logs',
@@ -778,7 +771,7 @@
         }, function (res) {
             if (res.success) {
                 loadLogs();
-                notify('Logs effacés.', 'info');
+                notify('Logs cleared.', 'info');
             }
         });
     });
