@@ -892,7 +892,7 @@ class MainWP_AI1WM_Manager
                                     </td>
                                     <td>
                                         <div class="ai1wm-actions">
-                                            <?php if (!empty($site['is_installed'])): ?>
+
                                                 <button class="ai1wm-btn ai1wm-btn-icon-primary ai1wm-btn-create"
                                                     data-site-id="<?php echo esc_attr($site['id']); ?>" title="Créer un backup">
                                                     <span class="material-icons-round">backup</span>
@@ -901,12 +901,6 @@ class MainWP_AI1WM_Manager
                                                     data-site-id="<?php echo esc_attr($site['id']); ?>" title="Rafraîchir les backups">
                                                     <span class="material-icons-round">refresh</span>
                                                 </button>
-                                            <?php else: ?>
-                                                <button class="ai1wm-btn ai1wm-btn-secondary ai1wm-install-child"
-                                                    data-site-id="<?php echo esc_attr($site['id']); ?>" title="Installer le plugin enfant">
-                                                    <span class="material-icons-round">download</span> Installer
-                                                </button>
-                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -1068,245 +1062,230 @@ class MainWP_AI1WM_Manager
                         if (res.success) {
                             renderBackups(siteId, res.data);
                         } else {
-                            if (res.data === 'PLUGIN_MISSING') {
-                                // Close accordion
-                                var $toggle = $('.ai1wm-toggle[data-site-id="' + siteId + '"]');
-                                $toggle.removeClass('open');
-                                $('.ai1wm-backups-row[data-site-id="' + siteId + '"]').slideUp(150);
-
-                                // Show install button
-                                var $actions = $('.ai1wm-btn-create[data-site-id="' + siteId + '"]').closest('.ai1wm-actions');
-                                $actions.html(
-                                    '<button class="ai1wm-btn ai1wm-btn-secondary ai1wm-install-child" ' +
-                                    'data-site-id="' + siteId + '" title="Installer le plugin enfant">' +
-                                    '<span class="material-icons-round">download</span> Installer' +
-                                    '</button>'
-                                );
-                                notify('Plugin enfant non détecté. Bouton d\'installation affiché.', 'warning');
-                            } else {
-                                $content.html('<p style="color:var(--ai-danger);">Erreur : ' + esc(res.data || 'Inconnue') + '</p>');
-                            }
+                        } else {
+                            $content.html('<p style="color:var(--ai-danger);">Erreur : ' + esc(res.data || 'Inconnue') + '</p>');
                         }
-                        if (callback) callback(res.success);
-                    }).fail(function () {
-                        $content.html('<p style="color:var(--ai-danger);">Erreur réseau.</p>');
-                        if (callback) callback(false);
-                    });
+                    }
+                                if (callback) callback(res.success);
+                }).fail(function () {
+                    $content.html('<p style="color:var(--ai-danger);">Erreur réseau.</p>');
+                    if (callback) callback(false);
+                });
+            }
+
+                        $(document).on('click', '.ai1wm-btn-list', function (e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var siteId = $btn.data('site-id');
+                btnLoading($btn, true);
+                loadBackups(siteId, function () {
+                    btnLoading($btn, false);
+                    // Open the dropdown
+                    var $toggle = $('.ai1wm-toggle[data-site-id="' + siteId + '"]');
+                    if (!$toggle.hasClass('open')) $toggle.trigger('click');
+                });
+            });
+
+            /* ==== AJAX: Create Backup ==== */
+            $(document).on('click', '.ai1wm-btn-create', function (e) {
+                e.preventDefault();
+                var $btn = $(this), siteId = $btn.data('site-id');
+                if (!confirm('Lancer une nouvelle sauvegarde sur ce site ?')) return;
+                btnLoading($btn, true);
+
+                $.post(ajaxurl, {
+                    action: 'ai1wm_create_backup',
+                    site_id: siteId,
+                    _nonce: nonce
+                }, function (res) {
+                    btnLoading($btn, false);
+                    if (res.success) {
+                        notify('✅ Sauvegarde lancée !', 'success');
+                        delete backupsCache[siteId];
+                        loadBackups(siteId);
+                    } else {
+                        notify('❌ ' + (res.data || 'Erreur'), 'error');
+                    }
+                }).fail(function () {
+                    btnLoading($btn, false);
+                    notify('❌ Erreur réseau.', 'error');
+                });
+            });
+
+            /* ==== AJAX: Delete Backup ==== */
+            $(document).on('click', '.ai1wm-btn-delete', function (e) {
+                e.preventDefault();
+                var $btn = $(this), siteId = $btn.data('site-id'), file = $btn.data('file');
+                if (!confirm('Supprimer « ' + file + ' » ?')) return;
+                btnLoading($btn, true);
+
+                $.post(ajaxurl, {
+                    action: 'ai1wm_delete_backup',
+                    site_id: siteId,
+                    file_name: file,
+                    _nonce: nonce
+                }, function (res) {
+                    btnLoading($btn, false);
+                    if (res.success) {
+                        notify('✅ Fichier supprimé !', 'success');
+                        delete backupsCache[siteId];
+                        loadBackups(siteId);
+                    } else {
+                        notify('❌ ' + (res.data || 'Erreur'), 'error');
+                    }
+                }).fail(function () {
+                    btnLoading($btn, false);
+                    notify('❌ Erreur réseau.', 'error');
+                });
+            });
+
+            /* ==== AJAX: Download Backup ==== */
+            $(document).on('click', '.ai1wm-btn-dl', function (e) {
+                e.preventDefault();
+                var $btn = $(this), siteId = $btn.data('site-id'), file = $btn.data('file');
+                btnLoading($btn, true);
+
+                $.post(ajaxurl, {
+                    action: 'ai1wm_download_backup',
+                    site_id: siteId,
+                    file_name: file,
+                    _nonce: nonce
+                }, function (res) {
+                    btnLoading($btn, false);
+                    if (res.success && res.data && res.data.url) {
+                        // Open download in new tab
+                        var a = document.createElement('a');
+                        a.href = res.data.url;
+                        a.download = file;
+                        a.target = '_blank';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        notify('✅ Téléchargement lancé !', 'success');
+                    } else {
+                        notify('❌ ' + (res.data || 'Téléchargement impossible'), 'error');
+                    }
+                }).fail(function () {
+                    btnLoading($btn, false);
+                    notify('❌ Erreur réseau.', 'error');
+                });
+            });
+
+            /* ==== Bulk: Backup Selected ==== */
+            $('#ai1wm-bulk-backup').on('click', function () {
+                var ids = getSelected();
+                if (!ids.length) return;
+                if (!confirm('Lancer une sauvegarde sur ' + ids.length + ' site(s) ?')) return;
+
+                var $prog = $('#ai1wm-bulk-progress').show();
+                $('#ai1wm-bulk-title').text('Création de backups…');
+                var done = 0, total = ids.length, ok = 0;
+
+                function updateProgress() {
+                    done++;
+                    var pct = Math.round((done / total) * 100);
+                    $('#ai1wm-progress-fill').css('width', pct + '%');
+                    $('#ai1wm-progress-text').text(done + ' / ' + total);
+                    if (done >= total) {
+                        setTimeout(function () { $prog.slideUp(200); }, 2000);
+                        notify('✅ Backup terminé : ' + ok + '/' + total + ' réussi(s).', ok === total ? 'success' : 'error');
+                    }
                 }
 
-                $(document).on('click', '.ai1wm-btn-list', function (e) {
-                    e.preventDefault();
-                    var $btn = $(this);
-                    var siteId = $btn.data('site-id');
-                    btnLoading($btn, true);
-                    loadBackups(siteId, function () {
-                        btnLoading($btn, false);
-                        // Open the dropdown
-                        var $toggle = $('.ai1wm-toggle[data-site-id="' + siteId + '"]');
-                        if (!$toggle.hasClass('open')) $toggle.trigger('click');
-                    });
-                });
-
-                /* ==== AJAX: Create Backup ==== */
-                $(document).on('click', '.ai1wm-btn-create', function (e) {
-                    e.preventDefault();
-                    var $btn = $(this), siteId = $btn.data('site-id');
-                    if (!confirm('Lancer une nouvelle sauvegarde sur ce site ?')) return;
-                    btnLoading($btn, true);
-
+                $.each(ids, function (i, siteId) {
                     $.post(ajaxurl, {
                         action: 'ai1wm_create_backup',
                         site_id: siteId,
                         _nonce: nonce
                     }, function (res) {
-                        btnLoading($btn, false);
-                        if (res.success) {
-                            notify('✅ Sauvegarde lancée !', 'success');
-                            delete backupsCache[siteId];
-                            loadBackups(siteId);
-                        } else {
-                            notify('❌ ' + (res.data || 'Erreur'), 'error');
-                        }
-                    }).fail(function () {
-                        btnLoading($btn, false);
-                        notify('❌ Erreur réseau.', 'error');
-                    });
+                        if (res.success) ok++;
+                        delete backupsCache[siteId];
+                        updateProgress();
+                    }).fail(function () { updateProgress(); });
                 });
+            });
 
-                /* ==== AJAX: Delete Backup ==== */
-                $(document).on('click', '.ai1wm-btn-delete', function (e) {
-                    e.preventDefault();
-                    var $btn = $(this), siteId = $btn.data('site-id'), file = $btn.data('file');
-                    if (!confirm('Supprimer « ' + file + ' » ?')) return;
-                    btnLoading($btn, true);
+            /* ==== Bulk: Download Latest from Selected ==== */
+            $('#ai1wm-bulk-download').on('click', function () {
+                var ids = getSelected();
+                if (!ids.length) return;
 
+                var $prog = $('#ai1wm-bulk-progress').show();
+                $('#ai1wm-bulk-title').text('Téléchargement des dernières backups…');
+                var done = 0, total = ids.length, ok = 0;
+
+                function updateProgress() {
+                    done++;
+                    var pct = Math.round((done / total) * 100);
+                    $('#ai1wm-progress-fill').css('width', pct + '%');
+                    $('#ai1wm-progress-text').text(done + ' / ' + total);
+                    if (done >= total) {
+                        setTimeout(function () { $prog.slideUp(200); }, 2000);
+                        notify('✅ Téléchargement : ' + ok + '/' + total + ' lancé(s).', ok === total ? 'success' : 'info');
+                    }
+                }
+
+                function doDownload(siteId) {
+                    // First get the list to find the latest backup
                     $.post(ajaxurl, {
-                        action: 'ai1wm_delete_backup',
+                        action: 'ai1wm_list_backups',
                         site_id: siteId,
-                        file_name: file,
                         _nonce: nonce
                     }, function (res) {
-                        btnLoading($btn, false);
-                        if (res.success) {
-                            notify('✅ Fichier supprimé !', 'success');
-                            delete backupsCache[siteId];
-                            loadBackups(siteId);
-                        } else {
-                            notify('❌ ' + (res.data || 'Erreur'), 'error');
-                        }
-                    }).fail(function () {
-                        btnLoading($btn, false);
-                        notify('❌ Erreur réseau.', 'error');
-                    });
-                });
-
-                /* ==== AJAX: Download Backup ==== */
-                $(document).on('click', '.ai1wm-btn-dl', function (e) {
-                    e.preventDefault();
-                    var $btn = $(this), siteId = $btn.data('site-id'), file = $btn.data('file');
-                    btnLoading($btn, true);
-
-                    $.post(ajaxurl, {
-                        action: 'ai1wm_download_backup',
-                        site_id: siteId,
-                        file_name: file,
-                        _nonce: nonce
-                    }, function (res) {
-                        btnLoading($btn, false);
-                        if (res.success && res.data && res.data.url) {
-                            // Open download in new tab
-                            var a = document.createElement('a');
-                            a.href = res.data.url;
-                            a.download = file;
-                            a.target = '_blank';
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            notify('✅ Téléchargement lancé !', 'success');
-                        } else {
-                            notify('❌ ' + (res.data || 'Téléchargement impossible'), 'error');
-                        }
-                    }).fail(function () {
-                        btnLoading($btn, false);
-                        notify('❌ Erreur réseau.', 'error');
-                    });
-                });
-
-                /* ==== Bulk: Backup Selected ==== */
-                $('#ai1wm-bulk-backup').on('click', function () {
-                    var ids = getSelected();
-                    if (!ids.length) return;
-                    if (!confirm('Lancer une sauvegarde sur ' + ids.length + ' site(s) ?')) return;
-
-                    var $prog = $('#ai1wm-bulk-progress').show();
-                    $('#ai1wm-bulk-title').text('Création de backups…');
-                    var done = 0, total = ids.length, ok = 0;
-
-                    function updateProgress() {
-                        done++;
-                        var pct = Math.round((done / total) * 100);
-                        $('#ai1wm-progress-fill').css('width', pct + '%');
-                        $('#ai1wm-progress-text').text(done + ' / ' + total);
-                        if (done >= total) {
-                            setTimeout(function () { $prog.slideUp(200); }, 2000);
-                            notify('✅ Backup terminé : ' + ok + '/' + total + ' réussi(s).', ok === total ? 'success' : 'error');
-                        }
-                    }
-
-                    $.each(ids, function (i, siteId) {
-                        $.post(ajaxurl, {
-                            action: 'ai1wm_create_backup',
-                            site_id: siteId,
-                            _nonce: nonce
-                        }, function (res) {
-                            if (res.success) ok++;
-                            delete backupsCache[siteId];
-                            updateProgress();
-                        }).fail(function () { updateProgress(); });
-                    });
-                });
-
-                /* ==== Bulk: Download Latest from Selected ==== */
-                $('#ai1wm-bulk-download').on('click', function () {
-                    var ids = getSelected();
-                    if (!ids.length) return;
-
-                    var $prog = $('#ai1wm-bulk-progress').show();
-                    $('#ai1wm-bulk-title').text('Téléchargement des dernières backups…');
-                    var done = 0, total = ids.length, ok = 0;
-
-                    function updateProgress() {
-                        done++;
-                        var pct = Math.round((done / total) * 100);
-                        $('#ai1wm-progress-fill').css('width', pct + '%');
-                        $('#ai1wm-progress-text').text(done + ' / ' + total);
-                        if (done >= total) {
-                            setTimeout(function () { $prog.slideUp(200); }, 2000);
-                            notify('✅ Téléchargement : ' + ok + '/' + total + ' lancé(s).', ok === total ? 'success' : 'info');
-                        }
-                    }
-
-                    function doDownload(siteId) {
-                        // First get the list to find the latest backup
-                        $.post(ajaxurl, {
-                            action: 'ai1wm_list_backups',
-                            site_id: siteId,
-                            _nonce: nonce
-                        }, function (res) {
-                            if (res.success && res.data && res.data.length > 0) {
-                                var latest = res.data[0]; // Already sorted desc
-                                renderBackups(siteId, res.data);
-                                // Now download it
-                                $.post(ajaxurl, {
-                                    action: 'ai1wm_download_backup',
-                                    site_id: siteId,
-                                    file_name: latest.name,
-                                    _nonce: nonce
-                                }, function (dlRes) {
-                                    if (dlRes.success && dlRes.data && dlRes.data.url) {
-                                        var a = document.createElement('a');
-                                        a.href = dlRes.data.url;
-                                        a.download = latest.name;
-                                        a.target = '_blank';
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        document.body.removeChild(a);
-                                        ok++;
-                                    }
-                                    updateProgress();
-                                }).fail(function () { updateProgress(); });
-                            } else {
+                        if (res.success && res.data && res.data.length > 0) {
+                            var latest = res.data[0]; // Already sorted desc
+                            renderBackups(siteId, res.data);
+                            // Now download it
+                            $.post(ajaxurl, {
+                                action: 'ai1wm_download_backup',
+                                site_id: siteId,
+                                file_name: latest.name,
+                                _nonce: nonce
+                            }, function (dlRes) {
+                                if (dlRes.success && dlRes.data && dlRes.data.url) {
+                                    var a = document.createElement('a');
+                                    a.href = dlRes.data.url;
+                                    a.download = latest.name;
+                                    a.target = '_blank';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    ok++;
+                                }
                                 updateProgress();
-                            }
-                        }).fail(function () { updateProgress(); });
-                    }
+                            }).fail(function () { updateProgress(); });
+                        } else {
+                            updateProgress();
+                        }
+                    }).fail(function () { updateProgress(); });
+                }
 
-                    $.each(ids, function (i, siteId) {
-                        // Stagger downloads by 500ms to avoid overwhelming the browser
-                        setTimeout(function () { doDownload(siteId); }, i * 500);
+                $.each(ids, function (i, siteId) {
+                    // Stagger downloads by 500ms to avoid overwhelming the browser
+                    setTimeout(function () { doDownload(siteId); }, i * 500);
+                });
+            });
+
+            /* ==== Refresh All ==== */
+            $('#ai1wm-refresh-all').on('click', function () {
+                var $btn = $(this);
+                btnLoading($btn, true);
+                backupsCache = {};
+                var total = $('.ai1wm-site-row').length, done = 0;
+
+                $('.ai1wm-site-row').each(function () {
+                    var siteId = $(this).data('site-id');
+                    loadBackups(siteId, function () {
+                        done++;
+                        if (done >= total) {
+                            btnLoading($btn, false);
+                            notify('✅ Toutes les listes rafraîchies.', 'success');
+                        }
                     });
                 });
+            });
 
-                /* ==== Refresh All ==== */
-                $('#ai1wm-refresh-all').on('click', function () {
-                    var $btn = $(this);
-                    btnLoading($btn, true);
-                    backupsCache = {};
-                    var total = $('.ai1wm-site-row').length, done = 0;
-
-                    $('.ai1wm-site-row').each(function () {
-                        var siteId = $(this).data('site-id');
-                        loadBackups(siteId, function () {
-                            done++;
-                            if (done >= total) {
-                                btnLoading($btn, false);
-                                notify('✅ Toutes les listes rafraîchies.', 'success');
-                            }
-                        });
-                    });
-                });
-
-            })(jQuery);
+                    }) (jQuery);
         </script>
         <?php
     }
@@ -1516,85 +1495,5 @@ class MainWP_AI1WM_Manager
         $this->handle_child_response($result, 'URL récupérée.', null);
     }
 
-    public function ajax_install_child()
-    {
-        check_ajax_referer('ai1wm_manager_nonce', '_nonce');
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permissions insuffisantes.');
-        }
 
-        $site_id = isset($_POST['site_id']) ? intval($_POST['site_id']) : 0;
-        if (!$site_id) {
-            wp_send_json_error('ID de site invalide.');
-        }
-
-        // 1. Get latest release asset URL from GitHub
-        $github_repo = 'kinou-p/mainwp-ai1wm-manager';
-        $asset_name = 'mainwp-ai1wm-manager-child.zip';
-        $download_url = '';
-
-        $response = wp_remote_get("https://api.github.com/repos/{$github_repo}/releases/latest");
-        if (is_wp_error($response) || 200 !== wp_remote_retrieve_response_code($response)) {
-            wp_send_json_error('Impossible de récupérer les infos de release GitHub.');
-        }
-
-        $data = json_decode(wp_remote_retrieve_body($response), true);
-        if (!empty($data['assets'])) {
-            foreach ($data['assets'] as $asset) {
-                if ($asset['name'] === $asset_name) {
-                    $download_url = $asset['browser_download_url'];
-                    break;
-                }
-            }
-        }
-
-        if (empty($download_url)) {
-            wp_send_json_error('Actif introuvable dans la dernière release.');
-        }
-
-        // 2. Install on child site via MainWP
-        // remove 'action' as it is defined by the function name in fetch_url_authed
-        $post_data = array(
-            'type' => 'plugin',
-            'url' => $download_url,
-            'name' => 'mainwp-ai1wm-manager-child/mainwp-ai1wm-manager-child.php', // Helpful for activation
-            'activate' => 'yes',
-            'overwrite' => 'yes'
-        );
-
-        try {
-            $result = null;
-
-            // Use MainWP_Connect to perform standard actions
-            if (class_exists('\MainWP\Dashboard\MainWP_DB') && class_exists('\MainWP\Dashboard\MainWP_Connect')) {
-                $website = \MainWP\Dashboard\MainWP_DB::instance()->get_website_by_id($site_id);
-                if ($website) {
-                    $result = \MainWP\Dashboard\MainWP_Connect::fetch_url_authed(
-                        $website,
-                        'install_plugintheme',
-                        $post_data
-                    );
-                } else {
-                    wp_send_json_error('Site non trouvé.');
-                }
-            } else {
-                wp_send_json_error('MainWP Dashboard classes non trouvées.');
-            }
-
-            // Handle response - MainWP usually returns {status: SUCCESS} or similar for installs
-            if (is_array($result) && isset($result['status']) && $result['status'] === 'SUCCESS') {
-                wp_send_json_success('Plugin installé et activé.');
-            } elseif (is_string($result) && strtoupper($result) === 'SUCCESS') {
-                wp_send_json_success('Plugin installé.');
-            } elseif (isset($result['error'])) {
-                wp_send_json_error('Erreur installation: ' . $result['error']);
-            } else {
-                // Optimistic success if no error
-                wp_send_json_success('Commande envoyée. Vérifiez le site enfant.');
-            }
-
-        } catch (\Exception $e) {
-            wp_send_json_error('Exception MainWP: ' . $e->getMessage());
-        }
-    }
 }
