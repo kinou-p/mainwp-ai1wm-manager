@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: MainWP AI1WM Backup Manager
- * Plugin URI:  https://github.com/your-repo/mainwp-ai1wm-manager
+ * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Manage All-in-One WP Migration backups on child sites directly from the MainWP Dashboard.
- * Version:     1.1.0
+ * Version:     1.1.1
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MAINWP_AI1WM_MANAGER_VERSION', '1.1.0');
+define('MAINWP_AI1WM_MANAGER_VERSION', '1.1.1');
 define('MAINWP_AI1WM_MANAGER_FILE', __FILE__);
 define('MAINWP_AI1WM_MANAGER_DIR', plugin_dir_path(__FILE__));
 define('MAINWP_AI1WM_MANAGER_URL', plugin_dir_url(__FILE__));
@@ -36,6 +36,14 @@ add_action('plugins_loaded', function () {
     if (mainwp_ai1wm_manager_check_mainwp()) {
         MainWP_AI1WM_Manager::get_instance();
     }
+
+    // GitHub Autoupdate
+    require_once plugin_dir_path(__FILE__) . 'class-github-updater.php';
+    new MainWP_AI1WM_Github_Updater(
+        __FILE__,
+        'kinou-p/mainwp-ai1wm-manager',
+        'mainwp-ai1wm-manager.zip'
+    );
 });
 
 class MainWP_AI1WM_Manager
@@ -442,17 +450,10 @@ class MainWP_AI1WM_Manager
                 border-radius: 4px;
             }
 
-            /* Site avatar */
             .site-avatar {
                 width: 34px;
                 height: 34px;
                 border-radius: 6px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                font-weight: 700;
-                color: #fff;
                 flex-shrink: 0;
             }
 
@@ -790,44 +791,44 @@ class MainWP_AI1WM_Manager
 
             <!-- Stats Cards -->
             <?php if (!empty($sites)): ?>
-            <div class="ai1wm-stats">
-                <div class="ai1wm-stat-card glass-panel">
-                    <div>
-                        <div class="stat-label">Total Sites</div>
-                        <div class="stat-value" id="ai1wm-stat-sites"><?php echo count($sites); ?></div>
+                <div class="ai1wm-stats">
+                    <div class="ai1wm-stat-card glass-panel">
+                        <div>
+                            <div class="stat-label">Total Sites</div>
+                            <div class="stat-value" id="ai1wm-stat-sites"><?php echo count($sites); ?></div>
+                        </div>
+                        <div class="ai1wm-stat-icon">
+                            <span class="material-icons-round">language</span>
+                        </div>
                     </div>
-                    <div class="ai1wm-stat-icon">
-                        <span class="material-icons-round">language</span>
+                    <div class="ai1wm-stat-card glass-panel">
+                        <div>
+                            <div class="stat-label">Total Backups</div>
+                            <div class="stat-value" id="ai1wm-stat-backups">–</div>
+                        </div>
+                        <div class="ai1wm-stat-icon">
+                            <span class="material-icons-round">inventory_2</span>
+                        </div>
+                    </div>
+                    <div class="ai1wm-stat-card glass-panel">
+                        <div>
+                            <div class="stat-label">Dernier Backup</div>
+                            <div class="stat-value" id="ai1wm-stat-last" style="font-size:16px;">–</div>
+                        </div>
+                        <div class="ai1wm-stat-icon green">
+                            <span class="material-icons-round">schedule</span>
+                        </div>
+                    </div>
+                    <div class="ai1wm-stat-card glass-panel">
+                        <div>
+                            <div class="stat-label">Erreurs</div>
+                            <div class="stat-value" id="ai1wm-stat-errors">0</div>
+                        </div>
+                        <div class="ai1wm-stat-icon green">
+                            <span class="material-icons-round">check_circle</span>
+                        </div>
                     </div>
                 </div>
-                <div class="ai1wm-stat-card glass-panel">
-                    <div>
-                        <div class="stat-label">Total Backups</div>
-                        <div class="stat-value" id="ai1wm-stat-backups">–</div>
-                    </div>
-                    <div class="ai1wm-stat-icon">
-                        <span class="material-icons-round">inventory_2</span>
-                    </div>
-                </div>
-                <div class="ai1wm-stat-card glass-panel">
-                    <div>
-                        <div class="stat-label">Dernier Backup</div>
-                        <div class="stat-value" id="ai1wm-stat-last" style="font-size:16px;">–</div>
-                    </div>
-                    <div class="ai1wm-stat-icon green">
-                        <span class="material-icons-round">schedule</span>
-                    </div>
-                </div>
-                <div class="ai1wm-stat-card glass-panel">
-                    <div>
-                        <div class="stat-label">Erreurs</div>
-                        <div class="stat-value" id="ai1wm-stat-errors">0</div>
-                    </div>
-                    <div class="ai1wm-stat-icon green">
-                        <span class="material-icons-round">check_circle</span>
-                    </div>
-                </div>
-            </div>
             <?php endif; ?>
 
             <!-- Bulk Progress -->
@@ -845,93 +846,81 @@ class MainWP_AI1WM_Manager
                     <?php esc_html_e('Aucun site enfant trouvé.', 'mainwp-ai1wm-manager'); ?>
                 </div>
             <?php else: ?>
-                <?php
-                    $gradients = array(
-                        'linear-gradient(135deg, #6366f1, #a855f7)',
-                        'linear-gradient(135deg, #10b981, #14b8a6)',
-                        'linear-gradient(135deg, #f43f5e, #ec4899)',
-                        'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                        'linear-gradient(135deg, #f97316, #eab308)',
-                        'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                        'linear-gradient(135deg, #ef4444, #f97316)',
-                        'linear-gradient(135deg, #14b8a6, #22c55e)',
-                    );
-                ?>
                 <div class="ai1wm-table-wrap glass-panel">
-                <table class="ai1wm-table" id="ai1wm-sites-table">
-                    <thead>
-                        <tr>
-                            <th class="cb-col"><input type="checkbox" id="ai1wm-select-all" title="Tout sélectionner"></th>
-                            <th><?php esc_html_e('Site Web', 'mainwp-ai1wm-manager'); ?></th>
-                            <th><?php esc_html_e('URL', 'mainwp-ai1wm-manager'); ?></th>
-                            <th style="text-align:center;"><?php esc_html_e('Backups', 'mainwp-ai1wm-manager'); ?></th>
-                            <th style="width:180px;text-align:right;"><?php esc_html_e('Actions', 'mainwp-ai1wm-manager'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($sites as $idx => $site):
-                            $initials = '';
-                            $words = explode(' ', $site['name']);
-                            foreach (array_slice($words, 0, 2) as $w) { $initials .= mb_strtoupper(mb_substr($w, 0, 1)); }
-                            $gradient = $gradients[$idx % count($gradients)];
-                        ?>
-                            <tr data-site-id="<?php echo esc_attr($site['id']); ?>" class="ai1wm-site-row">
-                                <td class="cb-col">
-                                    <input type="checkbox" class="ai1wm-site-cb" value="<?php echo esc_attr($site['id']); ?>">
-                                </td>
-                                <td>
-                                    <div class="site-info">
-                                        <div class="site-avatar" style="background:<?php echo $gradient; ?>">
-                                            <?php echo esc_html($initials); ?>
-                                        </div>
-                                        <div>
-                                            <div class="site-name"><?php echo esc_html($site['name']); ?></div>
-                                            <div class="site-status">Connecté</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <a href="<?php echo esc_url($site['url']); ?>" class="site-url" target="_blank">
-                                        <?php echo esc_html(preg_replace('#^https?://#', '', rtrim($site['url'], '/'))); ?>
-                                    </a>
-                                </td>
-                                <td style="text-align:center;">
-                                    <span class="ai1wm-toggle" data-site-id="<?php echo esc_attr($site['id']); ?>">
-                                        <span class="ai1wm-backup-count" data-site-id="<?php echo esc_attr($site['id']); ?>">–</span>
-                                        <span class="material-icons-round">expand_more</span>
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="ai1wm-actions">
-                                        <button class="ai1wm-btn ai1wm-btn-icon-primary ai1wm-btn-create"
-                                            data-site-id="<?php echo esc_attr($site['id']); ?>" title="Créer un backup">
-                                            <span class="material-icons-round">backup</span>
-                                        </button>
-                                        <button class="ai1wm-btn ai1wm-btn-ghost ai1wm-btn-list"
-                                            data-site-id="<?php echo esc_attr($site['id']); ?>" title="Rafraîchir les backups">
-                                            <span class="material-icons-round">refresh</span>
-                                        </button>
-                                    </div>
-                                </td>
+                    <table class="ai1wm-table" id="ai1wm-sites-table">
+                        <thead>
+                            <tr>
+                                <th class="cb-col"><input type="checkbox" id="ai1wm-select-all" title="Tout sélectionner"></th>
+                                <th><?php esc_html_e('Site Web', 'mainwp-ai1wm-manager'); ?></th>
+                                <th><?php esc_html_e('URL', 'mainwp-ai1wm-manager'); ?></th>
+                                <th style="text-align:center;"><?php esc_html_e('Backups', 'mainwp-ai1wm-manager'); ?></th>
+                                <th style="width:180px;text-align:right;"><?php esc_html_e('Actions', 'mainwp-ai1wm-manager'); ?>
+                                </th>
                             </tr>
-                            <tr class="ai1wm-backups-row" data-site-id="<?php echo esc_attr($site['id']); ?>" style="display:none;">
-                                <td colspan="5">
-                                    <div class="ai1wm-backups-container">
-                                        <div class="ai1wm-backups-inner">
-                                            <h4>
-                                                <span class="material-icons-round" style="font-size:16px;">folder_open</span>
-                                                <?php printf(esc_html__('Fichiers .wpress — %s', 'mainwp-ai1wm-manager'), esc_html($site['name'])); ?>
-                                            </h4>
-                                            <div class="ai1wm-backups-content">
-                                                <span class="ai1wm-spinner ai1wm-spinner-dark"></span> Chargement…
+                        </thead>
+                        <tbody>
+                            <?php foreach ($sites as $idx => $site):
+                                $favicon_url = 'https://www.google.com/s2/favicons?domain=' . urlencode($site['url']) . '&sz=64';
+                                ?>
+                                <tr data-site-id="<?php echo esc_attr($site['id']); ?>" class="ai1wm-site-row">
+                                    <td class="cb-col">
+                                        <input type="checkbox" class="ai1wm-site-cb" value="<?php echo esc_attr($site['id']); ?>">
+                                    </td>
+                                    <td>
+                                        <div class="site-info">
+                                            <div class="site-avatar">
+                                                <img src="<?php echo esc_url($favicon_url); ?>" alt=""
+                                                    style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
+                                            </div>
+                                            <div>
+                                                <div class="site-name"><?php echo esc_html($site['name']); ?></div>
+                                                <div class="site-status">Connecté</div>
                                             </div>
                                         </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                                    </td>
+                                    <td>
+                                        <a href="<?php echo esc_url($site['url']); ?>" class="site-url" target="_blank">
+                                            <?php echo esc_html(preg_replace('#^https?://#', '', rtrim($site['url'], '/'))); ?>
+                                        </a>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <span class="ai1wm-toggle" data-site-id="<?php echo esc_attr($site['id']); ?>">
+                                            <span class="ai1wm-backup-count"
+                                                data-site-id="<?php echo esc_attr($site['id']); ?>">–</span>
+                                            <span class="material-icons-round">expand_more</span>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="ai1wm-actions">
+                                            <button class="ai1wm-btn ai1wm-btn-icon-primary ai1wm-btn-create"
+                                                data-site-id="<?php echo esc_attr($site['id']); ?>" title="Créer un backup">
+                                                <span class="material-icons-round">backup</span>
+                                            </button>
+                                            <button class="ai1wm-btn ai1wm-btn-ghost ai1wm-btn-list"
+                                                data-site-id="<?php echo esc_attr($site['id']); ?>" title="Rafraîchir les backups">
+                                                <span class="material-icons-round">refresh</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="ai1wm-backups-row" data-site-id="<?php echo esc_attr($site['id']); ?>" style="display:none;">
+                                    <td colspan="5">
+                                        <div class="ai1wm-backups-container">
+                                            <div class="ai1wm-backups-inner">
+                                                <h4>
+                                                    <span class="material-icons-round" style="font-size:16px;">folder_open</span>
+                                                    <?php printf(esc_html__('Fichiers .wpress — %s', 'mainwp-ai1wm-manager'), esc_html($site['name'])); ?>
+                                                </h4>
+                                                <div class="ai1wm-backups-content">
+                                                    <span class="ai1wm-spinner ai1wm-spinner-dark"></span> Chargement…
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             <?php endif; ?>
         </div>

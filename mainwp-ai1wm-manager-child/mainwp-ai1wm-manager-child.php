@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: MainWP AI1WM Manager - Child
- * Plugin URI:  https://github.com/your-repo/mainwp-ai1wm-manager
+ * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Child site companion for MainWP AI1WM Backup Manager. Handles backup requests from the Dashboard.
- * Version:     1.0.1
+ * Version:     1.1.1
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
@@ -13,6 +13,16 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// GitHub Autoupdate
+add_action('plugins_loaded', function () {
+    require_once plugin_dir_path(__FILE__) . 'class-github-updater.php';
+    new MainWP_AI1WM_Github_Updater(
+        __FILE__,
+        'kinou-p/mainwp-ai1wm-manager',
+        'mainwp-ai1wm-manager-child.zip'
+    );
+});
 
 /**
  * Hook into MainWP Child's extra execution to handle custom actions.

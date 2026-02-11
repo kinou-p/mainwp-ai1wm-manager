@@ -2,6 +2,9 @@
 
 This repository contains a MainWP Dashboard extension and a Child Site plugin for managing All-in-One WP Migration backups.
 
+[https://github.com/kinou-p/mainwp-ai1wm-manager](https://github.com/kinou-p/mainwp-ai1wm-manager)
+
+
 ## Project Structure
 
 - **`mainwp-ai1wm-manager/`**: The MainWP Dashboard extension plugin.
