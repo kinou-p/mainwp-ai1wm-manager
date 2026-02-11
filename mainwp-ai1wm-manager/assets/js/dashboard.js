@@ -224,14 +224,17 @@
                 if (res.success) {
                     notify('✅ Sauvegarde lancée ! La création peut prendre quelques minutes...', 'success');
                     delete backupsCache[siteId];
+                    loadLogs(); // Refresh logs immediately
                     
                     // Auto-refresh after 30 seconds to check if backup is complete
                     setTimeout(function() {
                         loadBackups(siteId);
+                        loadLogs(); // Refresh logs again
                         notify('🔄 Vérification du statut de la sauvegarde...', 'info');
                     }, 30000);
                 } else {
                     notify('❌ ' + (res.data || 'Erreur'), 'error');
+                    loadLogs(); // Refresh logs even on error
                 }
             },
             error: function (xhr, status, error) {
@@ -265,12 +268,15 @@
                 notify('✅ Fichier supprimé !', 'success');
                 delete backupsCache[siteId];
                 loadBackups(siteId);
+                loadLogs(); // Refresh logs after deletion
             } else {
                 notify('❌ ' + (res.data || 'Erreur'), 'error');
+                loadLogs(); // Refresh logs even on error
             }
         }).fail(function () {
             btnLoading($btn, false);
             notify('❌ Erreur réseau.', 'error');
+            loadLogs(); // Refresh logs on network error
         });
     });
 
@@ -332,6 +338,7 @@
                     msg += ' Erreurs: ' + errors.join(', ');
                 }
                 notify(msg, ok === total ? 'success' : 'error');
+                loadLogs(); // Refresh logs after bulk operation completes
             }
         }
 
@@ -388,8 +395,7 @@
             $('#ai1wm-progress-text').text(done + ' / ' + total);
             if (done >= total) {
                 setTimeout(function () { $prog.slideUp(200); }, 2000);
-                notify('✅ Téléchargement : ' + ok + '/' + total + ' lancé(s).', ok === total ? 'success' : 'info');
-            }
+                notify('✅ Téléchargement : ' + ok + '/' + total + ' lancé(s).', ok === total ? 'success' : 'info');                loadLogs(); // Refresh logs after bulk download completes            }
         }
 
         function doDownload(siteId) {
@@ -500,6 +506,16 @@
     // Load logs on init
     loadLogs();
 
+    // Auto-refresh logs every 10 seconds
+    var logsAutoRefreshInterval = setInterval(function() {
+        loadLogs();
+    }, 10000);
+
+    // Stop auto-refresh if user leaves the page
+    $(window).on('beforeunload', function() {
+        clearInterval(logsAutoRefreshInterval);
+    });
+
     // Refresh logs button
     $('#ai1wm-refresh-logs').on('click', function (e) {
         e.preventDefault();
@@ -507,7 +523,10 @@
         $btn.find('.material-icons-round').addClass('fa-spin'); // Optional spin if using FA, but here just visual feedback
         $btn.prop('disabled', true);
         loadLogs();
-        setTimeout(function () { $btn.prop('disabled', false); }, 500);
+        setTimeout(function () { 
+            $btn.prop('disabled', false); 
+            $btn.find('.material-icons-round').removeClass('fa-spin');
+        }, 500);
     });
 
     // Clear logs button
@@ -525,10 +544,6 @@
             }
         });
     });
-
-    // Refresh logs when actions happen (optional, hook into existing success callbacks)
-    var originalRenderBackups = renderBackups; // Not easily hookable without modifying caller.
-    // Instead, just call loadLogs() in the success callbacks of other actions
 
     /* ==== Sorting System ==== */
     var currentSort = { col: null, dir: 'asc' };
