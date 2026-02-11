@@ -892,14 +892,21 @@ class MainWP_AI1WM_Manager
                                     </td>
                                     <td>
                                         <div class="ai1wm-actions">
-                                            <button class="ai1wm-btn ai1wm-btn-icon-primary ai1wm-btn-create"
-                                                data-site-id="<?php echo esc_attr($site['id']); ?>" title="Créer un backup">
-                                                <span class="material-icons-round">backup</span>
-                                            </button>
-                                            <button class="ai1wm-btn ai1wm-btn-ghost ai1wm-btn-list"
-                                                data-site-id="<?php echo esc_attr($site['id']); ?>" title="Rafraîchir les backups">
-                                                <span class="material-icons-round">refresh</span>
-                                            </button>
+                                            <?php if (!empty($site['is_installed'])): ?>
+                                                <button class="ai1wm-btn ai1wm-btn-icon-primary ai1wm-btn-create"
+                                                    data-site-id="<?php echo esc_attr($site['id']); ?>" title="Créer un backup">
+                                                    <span class="material-icons-round">backup</span>
+                                                </button>
+                                                <button class="ai1wm-btn ai1wm-btn-ghost ai1wm-btn-list"
+                                                    data-site-id="<?php echo esc_attr($site['id']); ?>" title="Rafraîchir les backups">
+                                                    <span class="material-icons-round">refresh</span>
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="ai1wm-btn ai1wm-btn-secondary ai1wm-install-child"
+                                                    data-site-id="<?php echo esc_attr($site['id']); ?>" title="Installer le plugin enfant">
+                                                    <span class="material-icons-round">download</span> Installer
+                                                </button>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -931,6 +938,34 @@ class MainWP_AI1WM_Manager
 
                 var nonce = '<?php echo esc_js(wp_create_nonce('ai1wm_manager_nonce')); ?>';
                 var backupsCache = {}; // site_id -> backups array
+
+                /* ==== Install Child Plugin ==== */
+                $(document).on('click', '.ai1wm-install-child', function(e) {
+                    e.preventDefault();
+                    var $btn = $(this);
+                    var siteId = $btn.data('site-id');
+                    
+                    if($btn.prop('disabled')) return;
+                    
+                    $btn.prop('disabled', true).html('<span class="ai1wm-spinner"></span> ...');
+                    
+                    $.post(ajaxurl, {
+                        action: 'ai1wm_install_child',
+                        site_id: siteId,
+                        _nonce: nonce
+                    }, function(res) {
+                        if(res.success) {
+                            $btn.replaceWith('<span style="color:var(--ai-success);font-size:13px;font-weight:500;"><span class="material-icons-round" style="font-size:16px;vertical-align:text-bottom;">check_circle</span> Installé</span>');
+                            setTimeout(function() { location.reload(); }, 2000);
+                        } else {
+                            alert('Erreur: ' + (res.data || 'Inconnue'));
+                            $btn.prop('disabled', false).html('<span class="material-icons-round">download</span> Réessayer');
+                        }
+                    }).fail(function() {
+                        alert('Erreur de communication.');
+                        $btn.prop('disabled', false).html('<span class="material-icons-round">download</span> Réessayer');
+                    });
+                });
 
                 /* ==== Notifications ==== */
                 function notify(msg, type) {
@@ -1299,17 +1334,33 @@ class MainWP_AI1WM_Manager
             return $sites;
         }
 
+        // Fetch plugins list as well
         $results = $wpdb->get_results(
-            "SELECT id, name, url FROM {$table} ORDER BY name ASC",
+            "SELECT id, name, url, plugins FROM {$table} ORDER BY name ASC",
             ARRAY_A
         );
 
         if ($results) {
             foreach ($results as $row) {
+                $is_installed = false;
+                $plugins = json_decode($row['plugins'], true);
+                if (is_array($plugins)) {
+                    foreach ($plugins as $plugin) {
+                        // Check for our child plugin slug
+                        if (strpos($plugin['slug'], 'mainwp-ai1wm-manager-child.php') !== false || $plugin['slug'] == 'mainwp-ai1wm-manager-child/mainwp-ai1wm-manager-child.php') {
+                            if ($plugin['active']) {
+                                $is_installed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 $sites[] = array(
                     'id' => intval($row['id']),
                     'name' => $row['name'],
                     'url' => $row['url'],
+                    'is_installed' => $is_installed
                 );
             }
         }
