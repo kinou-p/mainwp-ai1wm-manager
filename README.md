@@ -1,6 +1,5 @@
 # MainWP AI1WM Backup Manager
 
-[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 [![Version](https://img.shields.io/badge/version-0.20-green.svg)](https://github.com/kinou-p/mainwp-ai1wm-manager/releases)
 [![MainWP](https://img.shields.io/badge/MainWP-Compatible-orange.svg)](https://mainwp.com/)
 
