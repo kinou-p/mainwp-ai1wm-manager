@@ -17,9 +17,10 @@ Write-Host "[1/4] Deleting old ZIP files..." -ForegroundColor Yellow
 # Step 2: Dashboard plugin
 Write-Host ""
 Write-Host "[2/4] Creating mainwp-ai1wm-manager.zip..." -ForegroundColor Yellow
-# Use tar to ensure proper folder structure
 try {
-    tar -a -c -f mainwp-ai1wm-manager.zip mainwp-ai1wm-manager
+    Push-Location mainwp-ai1wm-manager
+    tar -a -c -f ..\mainwp-ai1wm-manager.zip *
+    Pop-Location
     if (Test-Path "mainwp-ai1wm-manager.zip") {
         Write-Host "      Done!" -ForegroundColor Green
     } else {
@@ -28,6 +29,7 @@ try {
     }
 } catch {
     Write-Host "      Error: $_" -ForegroundColor Red
+    Pop-Location
     exit 1
 }
 
@@ -35,7 +37,9 @@ try {
 Write-Host ""
 Write-Host "[3/4] Creating mainwp-ai1wm-manager-child.zip..." -ForegroundColor Yellow
 try {
-    tar -a -c -f mainwp-ai1wm-manager-child.zip mainwp-ai1wm-manager-child
+    Push-Location mainwp-ai1wm-manager-child
+    tar -a -c -f ..\mainwp-ai1wm-manager-child.zip *
+    Pop-Location
     if (Test-Path "mainwp-ai1wm-manager-child.zip") {
         Write-Host "      Done!" -ForegroundColor Green
     } else {
@@ -44,6 +48,7 @@ try {
     }
 } catch {
     Write-Host "      Error: $_" -ForegroundColor Red
+    Pop-Location
     exit 1
 }
 
