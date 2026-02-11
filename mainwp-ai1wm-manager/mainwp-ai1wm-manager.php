@@ -162,13 +162,12 @@ class MainWP_AI1WM_Manager
                 
                 $website = \MainWP\Dashboard\MainWP_DB::instance()->get_website_by_id($site_id);
                 if ($website) {
-                    // Pass null for function (default) and explicit file path for validation
+                    // Do not pass file path - it causes NOMAINWP error for non-registered extensions
+                    // MainWP will skip extension verification if no file is provided
                     $result = \MainWP\Dashboard\MainWP_Connect::fetch_url_authed(
                         $website,
                         'extra_execution',
-                        $post_data,
-                        null, 
-                        MAINWP_AI1WM_MANAGER_FILE
+                        $post_data
                     );
                 } else {
                     return array('error' => 'Site ID ' . $site_id . ' not found in MainWP database.');
@@ -181,12 +180,11 @@ class MainWP_AI1WM_Manager
 
                 $website = MainWP_DB::instance()->get_website_by_id($site_id);
                 if ($website) {
+                    // Do not pass file path - it causes NOMAINWP error for non-registered extensions
                     $result = MainWP_Connect::fetch_url_authed(
                         $website,
                         'extra_execution',
-                        $post_data,
-                        null,
-                        MAINWP_AI1WM_MANAGER_FILE
+                        $post_data
                     );
                 } else {
                     return array('error' => 'Site ID ' . $site_id . ' not found in MainWP database (legacy).');
@@ -197,9 +195,11 @@ class MainWP_AI1WM_Manager
                 $method = 'Method 3 (apply_filters)';
                 if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using ' . $method);
 
+                // Do not pass file path - causes NOMAINWP for non-registered extensions
+                // The filter expects: (key, function, website_id, what, post_data)
                 $result = apply_filters(
                     'mainwp_fetchurlauthed',
-                    MAINWP_AI1WM_MANAGER_FILE,
+                    '',  // Empty key instead of file path
                     '',
                     $site_id,
                     'extra_execution',

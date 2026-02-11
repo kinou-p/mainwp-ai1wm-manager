@@ -4,6 +4,37 @@
     var nonce = ai1wm_vars.nonce;
     var backupsCache = {}; // site_id -> backups array
 
+    /* ==== Retry Logic with Exponential Backoff ==== */
+    function ajaxWithRetry(options, maxRetries) {
+        maxRetries = maxRetries || 2;
+        var attempt = 0;
+
+        function tryRequest() {
+            attempt++;
+            var deferred = $.Deferred();
+
+            $.ajax(options)
+                .done(function(data, textStatus, xhr) {
+                    deferred.resolve(data, textStatus, xhr);
+                })
+                .fail(function(xhr, status, error) {
+                    if (attempt < maxRetries && status !== 'timeout') {
+                        // Exponential backoff: 1s, 2s, 4s...
+                        var delay = Math.pow(2, attempt) * 1000;
+                        setTimeout(function() {
+                            tryRequest();
+                        }, delay);
+                    } else {
+                        deferred.reject(xhr, status, error);
+                    }
+                });
+
+            return deferred.promise();
+        }
+
+        return tryRequest();
+    }
+
     /* ==== Notifications ==== */
     function notify(msg, type) {
         type = type || 'info';
@@ -123,11 +154,16 @@
         var $content = $('.ai1wm-backups-row[data-site-id="' + siteId + '"] .ai1wm-backups-content');
         $content.html('<span class="ai1wm-spinner ai1wm-spinner-dark"></span> Chargement…');
 
-        $.post(ajaxurl, {
-            action: 'ai1wm_list_backups',
-            site_id: siteId,
-            _nonce: nonce
-        }, function (res) {
+        ajaxWithRetry({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'ai1wm_list_backups',
+                site_id: siteId,
+                _nonce: nonce
+            },
+            timeout: 30000 // 30 seconds timeout
+        }, 2).done(function (res) {
             if (res.success) {
                 renderBackups(siteId, res.data);
             } else {
@@ -144,8 +180,12 @@
                 }
             }
             if (callback) callback(res.success);
-        }).fail(function () {
-            $content.html('<p style="color:var(--ai-danger);">Erreur réseau.</p>');
+        }).fail(function (xhr, status, error) {
+            if (status === 'timeout') {
+                $content.html('<p style="color:var(--ai-danger);">⏱️ Timeout - Le site ne répond pas.</p>');
+            } else {
+                $content.html('<p style="color:var(--ai-danger);">❌ Erreur réseau: ' + error + '</p>');
+            }
             if (callback) callback(false);
         });
     }
@@ -170,22 +210,40 @@
         if (!confirm('Lancer une nouvelle sauvegarde sur ce site ?')) return;
         btnLoading($btn, true);
 
-        $.post(ajaxurl, {
-            action: 'ai1wm_create_backup',
-            site_id: siteId,
-            _nonce: nonce
-        }, function (res) {
-            btnLoading($btn, false);
-            if (res.success) {
-                notify('✅ Sauvegarde lancée !', 'success');
-                delete backupsCache[siteId];
-                loadBackups(siteId);
-            } else {
-                notify('❌ ' + (res.data || 'Erreur'), 'error');
+        $.ajax({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'ai1wm_create_backup',
+                site_id: siteId,
+                _nonce: nonce
+            },
+            timeout: 120000, // 2 minutes timeout
+            success: function (res) {
+                btnLoading($btn, false);
+                if (res.success) {
+                    notify('✅ Sauvegarde lancée ! La création peut prendre quelques minutes...', 'success');
+                    delete backupsCache[siteId];
+                    
+                    // Auto-refresh after 30 seconds to check if backup is complete
+                    setTimeout(function() {
+                        loadBackups(siteId);
+                        notify('🔄 Vérification du statut de la sauvegarde...', 'info');
+                    }, 30000);
+                } else {
+                    notify('❌ ' + (res.data || 'Erreur'), 'error');
+                }
+            },
+            error: function (xhr, status, error) {
+                btnLoading($btn, false);
+                if (status === 'timeout') {
+                    notify('⏱️ Timeout - La sauvegarde peut toujours être en cours. Vérifiez dans quelques minutes.', 'info');
+                    // Still try to refresh after timeout
+                    setTimeout(function() { loadBackups(siteId); }, 60000);
+                } else {
+                    notify('❌ Erreur réseau: ' + error, 'error');
+                }
             }
-        }).fail(function () {
-            btnLoading($btn, false);
-            notify('❌ Erreur réseau.', 'error');
         });
     });
 
@@ -248,7 +306,7 @@
         });
     });
 
-    /* ==== Bulk: Backup Selected ==== */
+    /* ==== Bulk: Backup Selected (with concurrency limit) ==== */
     $('#ai1wm-bulk-backup').on('click', function () {
         var ids = getSelected();
         if (!ids.length) return;
@@ -256,30 +314,62 @@
 
         var $prog = $('#ai1wm-bulk-progress').show();
         $('#ai1wm-bulk-title').text('Création de backups…');
-        var done = 0, total = ids.length, ok = 0;
+        var done = 0, total = ids.length, ok = 0, errors = [];
+        var concurrency = 3; // Process 3 sites at a time
+        var queue = ids.slice();
+        var running = 0;
 
         function updateProgress() {
             done++;
             var pct = Math.round((done / total) * 100);
             $('#ai1wm-progress-fill').css('width', pct + '%');
-            $('#ai1wm-progress-text').text(done + ' / ' + total);
+            $('#ai1wm-progress-text').text(done + ' / ' + total + (ok > 0 ? ' (✅ ' + ok + ')' : ''));
+            
             if (done >= total) {
-                setTimeout(function () { $prog.slideUp(200); }, 2000);
-                notify('✅ Backup terminé : ' + ok + '/' + total + ' réussi(s).', ok === total ? 'success' : 'error');
+                setTimeout(function () { $prog.slideUp(200); }, 3000);
+                var msg = '✅ Backup terminé : ' + ok + '/' + total + ' réussi(s).';
+                if (errors.length > 0) {
+                    msg += ' Erreurs: ' + errors.join(', ');
+                }
+                notify(msg, ok === total ? 'success' : 'error');
             }
         }
 
-        $.each(ids, function (i, siteId) {
-            $.post(ajaxurl, {
-                action: 'ai1wm_create_backup',
-                site_id: siteId,
-                _nonce: nonce
-            }, function (res) {
+        function processNext() {
+            if (queue.length === 0) {
+                running--;
+                return;
+            }
+
+            var siteId = queue.shift();
+            running++;
+
+            $.ajax({
+                url: ajaxurl,
+                method: 'POST',
+                data: {
+                    action: 'ai1wm_create_backup',
+                    site_id: siteId,
+                    _nonce: nonce
+                },
+                timeout: 120000
+            }).done(function (res) {
                 if (res.success) ok++;
+                else errors.push('Site ' + siteId);
                 delete backupsCache[siteId];
+            }).fail(function () {
+                errors.push('Site ' + siteId + ' (network)');
+            }).always(function () {
                 updateProgress();
-            }).fail(function () { updateProgress(); });
-        });
+                running--;
+                processNext();
+            });
+        }
+
+        // Start initial batch
+        for (var i = 0; i < Math.min(concurrency, ids.length); i++) {
+            processNext();
+        }
     });
 
     /* ==== Bulk: Download Latest from Selected ==== */

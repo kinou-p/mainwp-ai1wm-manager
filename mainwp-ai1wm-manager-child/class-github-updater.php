@@ -38,7 +38,19 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
         private function get_repository_info()
         {
             if (is_null($this->github_response)) {
-                $args = array();
+                // Check cache first (1 hour expiration)
+                $cache_key = 'github_updater_' . md5($this->username . $this->repository);
+                $cached = get_transient($cache_key);
+                
+                if (false !== $cached && is_array($cached)) {
+                    $this->github_response = $cached;
+                    return $this->github_response;
+                }
+
+                $args = array(
+                    'timeout' => 10,
+                    'sslverify' => true,
+                );
                 $request_uri = sprintf('https://api.github.com/repos/%s/%s/releases/latest', $this->username, $this->repository);
 
                 if ($this->authorize_token) {
@@ -47,11 +59,29 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
 
                 $response = wp_remote_get($request_uri, $args);
 
-                if (is_wp_error($response) || 200 !== wp_remote_retrieve_response_code($response)) {
+                if (is_wp_error($response)) {
+                    error_log('GitHub Updater Error: ' . $response->get_error_message());
                     return false;
                 }
 
-                $this->github_response = json_decode(wp_remote_retrieve_body($response), true);
+                $response_code = wp_remote_retrieve_response_code($response);
+                if (200 !== $response_code) {
+                    error_log('GitHub Updater HTTP Error: ' . $response_code);
+                    return false;
+                }
+
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    error_log('GitHub Updater JSON Error: ' . json_last_error_msg());
+                    return false;
+                }
+
+                $this->github_response = $data;
+                
+                // Cache for 1 hour
+                set_transient($cache_key, $data, HOUR_IN_SECONDS);
             }
 
             return $this->github_response;
@@ -61,23 +91,35 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
         {
             if (property_exists($transient, 'checked')) {
                 if ($checked = $transient->checked) {
+                    // CRITICAL FIX: Actually fetch repository info
+                    $github_data = $this->get_repository_info();
+                    
+                    if (!$github_data || empty($github_data['tag_name'])) {
+                        return $transient; // No update available or GitHub error
+                    }
+
                     $this->plugin = get_plugin_data($this->file); // Update plugin data
-                    $out_of_date = version_compare($this->github_response['tag_name'] ?? 0, $checked[$this->basename], 'gt');
+                    
+                    // Normalize version numbers (remove 'v' prefix if present)
+                    $github_version = ltrim($github_data['tag_name'], 'v');
+                    $current_version = isset($checked[$this->basename]) ? $checked[$this->basename] : '0';
+                    
+                    $out_of_date = version_compare($github_version, $current_version, 'gt');
 
                     if ($out_of_date) {
-                        $new_files = $this->github_response['zipball_url']; // Default fall back
+                        $new_files = $github_data['zipball_url']; // Default fall back
                         $slug = current(explode('/', $this->basename));
 
                         $plugin = array(
                             'url' => $this->plugin['PluginURI'],
                             'slug' => $slug,
                             'package' => $new_files,
-                            'new_version' => $this->github_response['tag_name']
+                            'new_version' => $github_version // Use normalized version
                         );
 
                         // Find specific asset
-                        if (!empty($this->github_response['assets'])) {
-                            foreach ($this->github_response['assets'] as $asset) {
+                        if (!empty($github_data['assets'])) {
+                            foreach ($github_data['assets'] as $asset) {
                                 if ($asset['name'] === $this->asset_name) {
                                     $plugin['package'] = $asset['browser_download_url'];
                                     break;
@@ -133,12 +175,25 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
         {
             // Only run for this plugin
             global $wp_filesystem;
+            
             $install_directory = plugin_dir_path($this->file);
-            $wp_filesystem->move($result['destination'], $install_directory);
-            $result['destination'] = $install_directory;
-
-            if ($this->active) {
-                activate_plugin($this->basename);
+            
+            // Remove old plugin directory first
+            if ($wp_filesystem->exists($install_directory)) {
+                $wp_filesystem->delete($install_directory, true);
+            }
+            
+            // Move new version to correct location
+            if ($wp_filesystem->move($result['destination'], $install_directory)) {
+                $result['destination'] = $install_directory;
+                
+                // Reactivate if it was active
+                if ($this->active) {
+                    activate_plugin($this->basename);
+                }
+            } else {
+                // Log error if move failed
+                error_log('GitHub Updater: Failed to move plugin to ' . $install_directory);
             }
 
             return $result;
