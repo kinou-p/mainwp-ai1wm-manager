@@ -27,11 +27,11 @@
                 </button>
                 <button class="ai1wm-btn ai1wm-btn-secondary" id="ai1wm-bulk-download" disabled>
                     <span class="material-icons-round">download</span>
-                    Télécharger dernière
+                    Télécharger derniers backups
                 </button>
                 <button class="ai1wm-btn ai1wm-btn-primary" id="ai1wm-bulk-backup" disabled>
                     <span class="material-icons-round">backup</span>
-                    Backup sélection
+                    Créer backups
                 </button>
             </div>
         <?php endif; ?>
@@ -113,6 +113,10 @@
                             <?php esc_html_e('Backups', 'mainwp-ai1wm-manager'); ?>
                             <span class="material-icons-round sort-icon">unfold_more</span>
                         </th>
+                        <th class="ai1wm-sortable" data-sort="last-backup" style="width:180px;">
+                            <?php esc_html_e('Dernier Backup', 'mainwp-ai1wm-manager'); ?>
+                            <span class="material-icons-round sort-icon">unfold_more</span>
+                        </th>
                         <th style="width:180px;text-align:right;">
                             <?php esc_html_e('Actions', 'mainwp-ai1wm-manager'); ?>
                         </th>
@@ -153,6 +157,12 @@
                                 </span>
                             </td>
                             <td>
+                                <div class="ai1wm-last-backup" data-site-id="<?php echo esc_attr($site['id']); ?>" style="color:var(--ai-text-muted);font-size:13px;">
+                                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-right:4px;">schedule</span>
+                                    <span class="last-backup-date">–</span>
+                                </div>
+                            </td>
+                            <td>
                                 <div class="ai1wm-actions">
                                     <button class="ai1wm-btn ai1wm-btn-icon-primary ai1wm-btn-create"
                                         data-site-id="<?php echo esc_attr($site['id']); ?>" title="Créer un backup">
@@ -166,7 +176,7 @@
                             </td>
                         </tr>
                         <tr class="ai1wm-backups-row" data-site-id="<?php echo esc_attr($site['id']); ?>" style="display:none;">
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="ai1wm-backups-container">
                                     <div class="ai1wm-backups-inner">
                                         <h4>

@@ -1,7 +1,7 @@
 # MainWP AI1WM Backup Manager
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
-[![Version](https://img.shields.io/badge/version-1.1.3-green.svg)](https://github.com/kinou-p/mainwp-ai1wm-manager/releases)
+[![Version](https://img.shields.io/badge/version-1.2.0-green.svg)](https://github.com/kinou-p/mainwp-ai1wm-manager/releases)
 [![MainWP](https://img.shields.io/badge/MainWP-Compatible-orange.svg)](https://mainwp.com/)
 
 **Manage All-in-One WP Migration backups on child sites directly from your MainWP Dashboard.**
@@ -99,7 +99,7 @@ You have **two options** for installing the child plugin:
 
 **Multiple Sites (Bulk):**
 - Check the boxes next to sites you want to backup
-- Click **"Backup sélection"** in the toolbar
+- Click **"Créer backups"** in the toolbar
 - Monitor progress in the progress bar
 - Operations are processed 3 sites at a time to avoid overload
 
@@ -118,7 +118,7 @@ You have **two options** for installing the child plugin:
 
 **Bulk Download (Latest):**
 - Select multiple sites
-- Click **"Télécharger dernière"** in toolbar
+- Click **"Télécharger derniers backups"** in toolbar
 - Downloads the most recent backup from each site
 
 ### Deleting Backups
@@ -237,7 +237,7 @@ Check logs in `wp-content/debug.log`
 
 ## 📝 Changelog
 
-### Version 1.1.3 (2026-02-11)
+### Version 1.2.0 (2026-02-11)
 
 **Security:**
 - Added secure download system with temporary tokens

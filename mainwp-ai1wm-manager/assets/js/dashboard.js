@@ -69,8 +69,18 @@
         var $row = $('.ai1wm-backups-row[data-site-id="' + siteId + '"]');
         var $content = $row.find('.ai1wm-backups-content');
         var $count = $('.ai1wm-backup-count[data-site-id="' + siteId + '"]');
+        var $lastBackup = $('.ai1wm-last-backup[data-site-id="' + siteId + '"] .last-backup-date');
 
         $count.text(backups ? backups.length : 0);
+
+        // Update last backup date/time
+        if (backups && backups.length > 0) {
+            $lastBackup.text(backups[0].date);
+            $lastBackup.parent().css('color', 'var(--ai-success)');
+        } else {
+            $lastBackup.text('–');
+            $lastBackup.parent().css('color', 'var(--ai-text-muted)');
+        }
 
         if (!backups || backups.length === 0) {
             $content.html('<p style="color:var(--ai-text-dim);font-style:italic;margin:0;">Aucune sauvegarde sur ce site.</p>');
@@ -393,34 +403,118 @@
         });
     });
 
-    /* ==== Bulk: Backup Selected (with concurrency limit) ==== */
+    /* ==== Bulk: Backup Selected (with intelligent polling) ==== */
     $('#ai1wm-bulk-backup').on('click', function () {
         var ids = getSelected();
         if (!ids.length) return;
-        if (!confirm('Lancer une sauvegarde sur ' + ids.length + ' site(s) ?')) return;
+        if (!confirm('Créer un backup sur ' + ids.length + ' site(s) sélectionné(s) ?\n\n⚠️ Cela peut prendre plusieurs minutes par site.')) return;
 
         var $prog = $('#ai1wm-bulk-progress').show();
-        $('#ai1wm-bulk-title').text('Création de backups…');
-        var done = 0, total = ids.length, ok = 0, errors = [];
+        $('#ai1wm-bulk-title').text('Création de backups en cours…');
+        var initiated = 0, total = ids.length, completed = 0, errors = [];
         var concurrency = 3; // Process 3 sites at a time
         var queue = ids.slice();
         var running = 0;
+        var sitePolling = {}; // Track polling for each site
 
         function updateProgress() {
-            done++;
-            var pct = Math.round((done / total) * 100);
+            var pct = Math.round((completed / total) * 100);
             $('#ai1wm-progress-fill').css('width', pct + '%');
-            $('#ai1wm-progress-text').text(done + ' / ' + total + (ok > 0 ? ' (✅ ' + ok + ')' : ''));
+            $('#ai1wm-progress-text').text(
+                'Terminés: ' + completed + ' / ' + total + 
+                (initiated > completed ? ' (En cours: ' + (initiated - completed) + ')' : '')
+            );
             
-            if (done >= total) {
+            if (completed >= total) {
                 setTimeout(function () { $prog.slideUp(200); }, 3000);
-                var msg = '✅ Backup terminé : ' + ok + '/' + total + ' réussi(s).';
+                var successCount = total - errors.length;
+                var msg = '✅ Backups terminés : ' + successCount + '/' + total + ' réussi(s).';
                 if (errors.length > 0) {
-                    msg += ' Erreurs: ' + errors.join(', ');
+                    msg += '\n❌ Erreurs: ' + errors.join(', ');
                 }
-                notify(msg, ok === total ? 'success' : 'error');
-                loadLogs(); // Refresh logs after bulk operation completes
+                notify(msg, errors.length === 0 ? 'success' : 'error');
+                loadLogs();
             }
+        }
+
+        function markSiteCompleted(siteId, success, errorMsg) {
+            if (sitePolling[siteId]) {
+                clearInterval(sitePolling[siteId].pollInterval);
+                if (sitePolling[siteId].timeoutId) {
+                    clearTimeout(sitePolling[siteId].timeoutId);
+                }
+                delete sitePolling[siteId];
+            }
+
+            if (!success) {
+                errors.push('Site ' + siteId + (errorMsg ? ' (' + errorMsg + ')' : ''));
+            }
+            
+            completed++;
+            updateProgress();
+            
+            // Update the site row badge
+            var $row = $('#ai1wm-site-' + siteId);
+            if ($row.length) {
+                $row.find('.backup-status-badge').remove();
+                if (success) {
+                    delete backupsCache[siteId];
+                    loadBackups(siteId);
+                }
+            }
+        }
+
+        function startPollingForSite(siteId, initialCount) {
+            var startTime = Date.now();
+            var maxWait = 20 * 60 * 1000; // 20 minutes
+            var pollInterval = 15000; // 15 seconds
+            var checkCount = 0;
+
+            function checkBackupStatus() {
+                checkCount++;
+                var elapsed = Date.now() - startTime;
+                
+                if (elapsed >= maxWait) {
+                    markSiteCompleted(siteId, false, 'timeout 20min');
+                    return;
+                }
+
+                // Check backup list
+                $.post(ajaxurl, {
+                    action: 'ai1wm_list_backups',
+                    site_id: siteId,
+                    _nonce: nonce
+                }, function (res) {
+                    if (res.success && res.data) {
+                        var currentCount = res.data.length;
+                        if (currentCount > initialCount) {
+                            // New backup detected!
+                            markSiteCompleted(siteId, true);
+                        }
+                    }
+                }).fail(function () {
+                    // Network error, but continue polling
+                    if (checkCount >= 5) {
+                        markSiteCompleted(siteId, false, 'network error');
+                    }
+                });
+            }
+
+            // Start polling
+            var intervalId = setInterval(checkBackupStatus, pollInterval);
+            var timeoutId = setTimeout(function () {
+                clearInterval(intervalId);
+                markSiteCompleted(siteId, false, 'timeout');
+            }, maxWait);
+
+            sitePolling[siteId] = {
+                pollInterval: intervalId,
+                timeoutId: timeoutId,
+                initialCount: initialCount
+            };
+
+            // First check after 15 seconds
+            setTimeout(checkBackupStatus, pollInterval);
         }
 
         function processNext() {
@@ -432,23 +526,51 @@
             var siteId = queue.shift();
             running++;
 
-            $.ajax({
-                url: ajaxurl,
-                method: 'POST',
-                data: {
-                    action: 'ai1wm_create_backup',
-                    site_id: siteId,
-                    _nonce: nonce
-                },
-                timeout: 120000
-            }).done(function (res) {
-                if (res.success) ok++;
-                else errors.push('Site ' + siteId);
-                delete backupsCache[siteId];
+            // Get current backup count first
+            $.post(ajaxurl, {
+                action: 'ai1wm_list_backups',
+                site_id: siteId,
+                _nonce: nonce
+            }, function (countRes) {
+                var initialCount = (countRes.success && countRes.data) ? countRes.data.length : 0;
+
+                // Show badge on site row
+                var $row = $('#ai1wm-site-' + siteId);
+                if ($row.length) {
+                    $row.find('.backup-status-badge').remove();
+                    $row.find('.ai1wm-site-name').append(
+                        '<span class="backup-status-badge backup-creating">' +
+                        '<span class="spinner"></span> Backup en cours...</span>'
+                    );
+                }
+
+                // Initiate backup
+                $.ajax({
+                    url: ajaxurl,
+                    method: 'POST',
+                    data: {
+                        action: 'ai1wm_create_backup',
+                        site_id: siteId,
+                        _nonce: nonce
+                    },
+                    timeout: 120000
+                }).done(function (res) {
+                    if (res.success) {
+                        initiated++;
+                        updateProgress();
+                        // Start intelligent polling
+                        startPollingForSite(siteId, initialCount);
+                    } else {
+                        markSiteCompleted(siteId, false, 'init failed');
+                    }
+                }).fail(function () {
+                    markSiteCompleted(siteId, false, 'network');
+                }).always(function () {
+                    running--;
+                    processNext();
+                });
             }).fail(function () {
-                errors.push('Site ' + siteId + ' (network)');
-            }).always(function () {
-                updateProgress();
+                markSiteCompleted(siteId, false, 'list failed');
                 running--;
                 processNext();
             });
@@ -465,8 +587,10 @@
         var ids = getSelected();
         if (!ids.length) return;
 
+        if (!confirm('Télécharger le dernier backup de ' + ids.length + ' site(s) sélectionné(s) ?')) return;
+
         var $prog = $('#ai1wm-bulk-progress').show();
-        $('#ai1wm-bulk-title').text('Téléchargement des dernières backups…');
+        $('#ai1wm-bulk-title').text('Téléchargement des derniers backups…');
         var done = 0, total = ids.length, ok = 0;
 
         function updateProgress() {
@@ -476,8 +600,11 @@
             $('#ai1wm-progress-text').text(done + ' / ' + total);
             if (done >= total) {
                 setTimeout(function () { $prog.slideUp(200); }, 2000);
-                notify('✅ Téléchargement : ' + ok + '/' + total + ' lancé(s).', ok === total ? 'success' : 'info');
-                loadLogs(); // Refresh logs after bulk download completes
+                var msg = ok === total 
+                    ? '✅ Téléchargement lancé pour ' + ok + ' backup(s).' 
+                    : '⚠️ Téléchargement : ' + ok + '/' + total + ' réussi(s).';
+                notify(msg, ok === total ? 'success' : 'warning');
+                loadLogs();
             }
         }
 
