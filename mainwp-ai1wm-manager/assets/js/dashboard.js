@@ -210,6 +210,11 @@
         if (!confirm('Lancer une nouvelle sauvegarde sur ce site ?')) return;
         btnLoading($btn, true);
 
+        // Add visual indicator in the row
+        var $row = $('.ai1wm-site-row[data-site-id="' + siteId + '"]');
+        var $statusBadge = $('<span class="ai1wm-backup-status" style="margin-left:10px;padding:4px 8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:4px;font-size:11px;color:#3b82f6;"><span class="ai1wm-spinner ai1wm-spinner-sm" style="display:inline-block;width:10px;height:10px;margin-right:5px;"></span>Backup en cours...</span>');
+        $row.find('.site-name').append($statusBadge);
+
         $.ajax({
             url: ajaxurl,
             method: 'POST',
@@ -221,15 +226,22 @@
             timeout: 120000, // 2 minutes timeout
             success: function (res) {
                 btnLoading($btn, false);
+                $statusBadge.remove();
+                
                 if (res.success) {
                     notify('✅ Sauvegarde lancée ! La création peut prendre quelques minutes...', 'success');
                     delete backupsCache[siteId];
                     loadLogs(); // Refresh logs immediately
                     
+                    // Show "processing" badge
+                    var $processingBadge = $('<span class="ai1wm-backup-status" style="margin-left:10px;padding:4px 8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;font-size:11px;color:#22c55e;">⚙️ Traitement...</span>');
+                    $row.find('.site-name').append($processingBadge);
+                    
                     // Auto-refresh after 30 seconds to check if backup is complete
                     setTimeout(function() {
                         loadBackups(siteId);
                         loadLogs(); // Refresh logs again
+                        $processingBadge.remove();
                         notify('🔄 Vérification du statut de la sauvegarde...', 'info');
                     }, 30000);
                 } else {
@@ -239,6 +251,8 @@
             },
             error: function (xhr, status, error) {
                 btnLoading($btn, false);
+                $statusBadge.remove();
+                
                 if (status === 'timeout') {
                     notify('⏱️ Timeout - La sauvegarde peut toujours être en cours. Vérifiez dans quelques minutes.', 'info');
                     // Still try to refresh after timeout
