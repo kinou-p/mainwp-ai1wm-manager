@@ -18,9 +18,7 @@ Write-Host "[1/4] Deleting old ZIP files..." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "[2/4] Creating mainwp-ai1wm-manager.zip..." -ForegroundColor Yellow
 try {
-    Push-Location mainwp-ai1wm-manager
-    tar -a -c -f ..\mainwp-ai1wm-manager.zip *
-    Pop-Location
+    tar -a -c -f mainwp-ai1wm-manager.zip mainwp-ai1wm-manager
     if (Test-Path "mainwp-ai1wm-manager.zip") {
         Write-Host "      Done!" -ForegroundColor Green
     } else {
@@ -29,7 +27,6 @@ try {
     }
 } catch {
     Write-Host "      Error: $_" -ForegroundColor Red
-    Pop-Location
     exit 1
 }
 
@@ -37,9 +34,7 @@ try {
 Write-Host ""
 Write-Host "[3/4] Creating mainwp-ai1wm-manager-child.zip..." -ForegroundColor Yellow
 try {
-    Push-Location mainwp-ai1wm-manager-child
-    tar -a -c -f ..\mainwp-ai1wm-manager-child.zip *
-    Pop-Location
+    tar -a -c -f mainwp-ai1wm-manager-child.zip mainwp-ai1wm-manager-child
     if (Test-Path "mainwp-ai1wm-manager-child.zip") {
         Write-Host "      Done!" -ForegroundColor Green
     } else {
@@ -48,7 +43,6 @@ try {
     }
 } catch {
     Write-Host "      Error: $_" -ForegroundColor Red
-    Pop-Location
     exit 1
 }
 
