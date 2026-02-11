@@ -3,6 +3,13 @@
 
     var nonce = ai1wm_vars.nonce;
     var backupsCache = {}; // site_id -> backups array
+    var i18n = window.AI1WM_i18n || { t: function(k) { return k; } };
+
+    /* ==== Language Selector ==== */
+    $('.ai1wm-lang-btn').on('click', function() {
+        var lang = $(this).data('lang');
+        i18n.setLang(lang);
+    });
 
     /* ==== Retry Logic with Exponential Backoff ==== */
     function ajaxWithRetry(options, maxRetries) {

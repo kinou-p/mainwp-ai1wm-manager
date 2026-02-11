@@ -7,29 +7,34 @@
                 <span class="material-icons-round">cloud_sync</span>
             </div>
             <div>
-                <h1>
+                <h1 data-i18n="ai1wm_backup_manager">
                     <?php esc_html_e('AI1WM Backup Manager', 'mainwp-ai1wm-manager'); ?>
                 </h1>
-                <div class="ai1wm-version">Version
+                <div class="ai1wm-version"><span data-i18n="version">Version</span>
                     <?php echo esc_html(MAINWP_AI1WM_MANAGER_VERSION); ?>
                 </div>
             </div>
+        </div>
+        
+        <div class="ai1wm-lang-selector">
+            <button class="ai1wm-lang-btn active" data-lang="fr" title="Français">🇫🇷</button>
+            <button class="ai1wm-lang-btn" data-lang="en" title="English">🇬🇧</button>
         </div>
 
         <?php if (!empty($sites)): ?>
             <div class="ai1wm-toolbar">
                 <span class="ai1wm-selected-count" id="ai1wm-selected-count">
-                    <span class="count-num">0</span> sélectionné(s)
+                    <span class="count-num">0</span> <span data-i18n="selected">sélectionné(s)</span>
                 </span>
-                <button class="ai1wm-btn ai1wm-btn-outline" id="ai1wm-refresh-all">
+                <button class="ai1wm-btn ai1wm-btn-outline" id="ai1wm-refresh-all" data-i18n="refresh_all">
                     <span class="material-icons-round">refresh</span>
                     Rafraîchir tout
                 </button>
-                <button class="ai1wm-btn ai1wm-btn-secondary" id="ai1wm-bulk-download" disabled>
+                <button class="ai1wm-btn ai1wm-btn-secondary" id="ai1wm-bulk-download" disabled data-i18n="download_latest">
                     <span class="material-icons-round">download</span>
                     Télécharger derniers backups
                 </button>
-                <button class="ai1wm-btn ai1wm-btn-primary" id="ai1wm-bulk-backup" disabled>
+                <button class="ai1wm-btn ai1wm-btn-primary" id="ai1wm-bulk-backup" disabled data-i18n="create_backups">
                     <span class="material-icons-round">backup</span>
                     Créer backups
                 </button>

@@ -178,14 +178,9 @@ mainwp-ai1wm-manager/
 │   └── class-github-updater.php    # Auto-update handler
 │
 ├── build.ps1                       # Build script
-├── README.md                       # This file
-├── GITHUB-RELEASES-GUIDE.md        # Release creation guide
-└── LICENSE                         # GPL v2 License
+└── README.md                       # This file
+
 ```
-
-### Creating a Release
-
-See [GITHUB-RELEASES-GUIDE.md](GITHUB-RELEASES-GUIDE.md) for detailed instructions on creating GitHub releases with automatic WordPress updates.
 
 ---
 
@@ -235,30 +230,6 @@ Check logs in `wp-content/debug.log`
 
 ---
 
-## 📝 Changelog
-
-### Version 0.20 (2026-02-11)
-
-**Security:**
-- Added secure download system with temporary tokens
-- Automatic .htaccess protection for backup directories
-- Enhanced path traversal protection
-
-**Bug Fixes:**
-- Fixed NOMAINWP error on most sites
-- Fixed GitHub updater not checking for updates
-- Improved backup creation async feedback
-
-**Improvements:**
-- Automatic retry with exponential backoff
-- Proper timeouts (30s list, 120s backup)
-- Bulk operations with concurrency limit
-- Smart caching for GitHub API calls
-
-[See full changelog](CHANGELOG.md)
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -279,31 +250,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-## 📄 License
-
-This project is licensed under the **GNU General Public License v2.0** - see the [LICENSE](LICENSE) file for details.
-
-```
-MainWP AI1WM Backup Manager
-Copyright (C) 2024-2026 Alexandre Pommier
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-```
-
----
-
 ## 👨‍💻 Author
 
 **Alexandre Pommier**
@@ -316,14 +262,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 - [MainWP](https://mainwp.com/) - For the amazing WordPress management dashboard
 - [All-in-One WP Migration](https://servmask.com/) - For the excellent backup solution
-- WordPress Community - For continuous support and inspiration
 
 ---
 
 ## 💬 Support
 
 - **Issues**: [GitHub Issues](https://github.com/kinou-p/mainwp-ai1wm-manager/issues)
-- **Documentation**: [GitHub Wiki](https://github.com/kinou-p/mainwp-ai1wm-manager/wiki)
 - **Releases**: [GitHub Releases](https://github.com/kinou-p/mainwp-ai1wm-manager/releases)
 
 ---

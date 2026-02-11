@@ -120,9 +120,17 @@ class MainWP_AI1WM_Manager
         );
 
         wp_enqueue_script(
+            'ai1wm-i18n-js',
+            MAINWP_AI1WM_MANAGER_URL . 'assets/js/i18n.js',
+            array('jquery'),
+            MAINWP_AI1WM_MANAGER_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
             'ai1wm-dashboard-js',
             MAINWP_AI1WM_MANAGER_URL . 'assets/js/dashboard.js',
-            array('jquery'),
+            array('jquery', 'ai1wm-i18n-js'),
             MAINWP_AI1WM_MANAGER_VERSION,
             true
         );
