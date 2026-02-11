@@ -177,14 +177,25 @@ function ai1wm_child_ensure_htaccess($dir)
 
 function ai1wm_child_create_backup()
 {
-    // Check that All-in-One WP Migration is active.
-    if (!defined('AI1WM_PLUGIN_NAME') && !class_exists('Ai1wm_Main_Controller')) {
-        ai1wm_child_respond_error('All-in-One WP Migration is not active on this site.');
+    $debug_info = array();
+    
+    // Check that All-in-One WP Migration is active with detailed diagnostics
+    $has_constant = defined('AI1WM_PLUGIN_NAME');
+    $has_class = class_exists('Ai1wm_Main_Controller');
+    $has_export_class = class_exists('Ai1wm_Export_Controller');
+    
+    $debug_info[] = 'AI1WM_PLUGIN_NAME: ' . ($has_constant ? 'Yes' : 'No');
+    $debug_info[] = 'Ai1wm_Main_Controller: ' . ($has_class ? 'Yes' : 'No');
+    $debug_info[] = 'Ai1wm_Export_Controller: ' . ($has_export_class ? 'Yes' : 'No');
+    
+    if (!$has_constant && !$has_class) {
+        ai1wm_child_respond_error('AI1WM not active. Debug: ' . implode(', ', $debug_info));
         return;
     }
 
     // Method 1: Try WP-CLI if exec() is available.
     if (ai1wm_child_can_exec()) {
+        $debug_info[] = 'Method 1: WP-CLI attempting';
         $wp_path = ABSPATH;
         $command = sprintf(
             'cd %s && wp ai1wm backup --allow-root 2>&1',
@@ -201,11 +212,15 @@ function ai1wm_child_create_backup()
             ));
             return;
         }
+        $debug_info[] = 'Method 1: Failed (exit code ' . $code . ', output: ' . implode(' ', array_slice($output, -2)) . ')';
+    } else {
+        $debug_info[] = 'Method 1: WP-CLI not available';
     }
 
     // Method 2: Use AI1WM's internal API via HTTP request (most reliable)
-    // This simulates what the browser does when clicking "Export" in AI1WM
     if (function_exists('wp_remote_post')) {
+        $debug_info[] = 'Method 2: wp_remote_post attempting';
+        
         // Build the export options as AI1WM expects them
         $export_options = array(
             'action' => 'ai1wm_export',
@@ -229,24 +244,50 @@ function ai1wm_child_create_backup()
 
         if (!is_wp_error($response)) {
             $body = wp_remote_retrieve_body($response);
+            $code = wp_remote_retrieve_response_code($response);
             $data = json_decode($body, true);
+            
+            $debug_info[] = 'Method 2: HTTP ' . $code;
             
             // AI1WM returns a status file that tracks the export progress
             if (isset($data['status']) || isset($data['progress'])) {
                 ai1wm_child_respond(array(
                     'success' => true,
-                    'data' => 'Backup export started. It will appear in the backup list once complete.',
+                    'data' => 'Backup export started via AJAX.',
                 ));
                 return;
             }
+            
+            // Check if we got any positive response
+            if ($code === 200 && !empty($body)) {
+                // Sometimes AI1WM responds with just "1" or other simple responses
+                if (preg_match('/success|export|backup|started/i', $body) || strlen($body) < 50) {
+                    ai1wm_child_respond(array(
+                        'success' => true,
+                        'data' => 'Backup export initiated via AJAX.',
+                    ));
+                    return;
+                }
+            }
+            
+            $debug_info[] = 'Method 2: No success indicator (body: ' . substr($body, 0, 100) . ')';
+        } else {
+            $debug_info[] = 'Method 2: WP_Error - ' . $response->get_error_message();
         }
+    } else {
+        $debug_info[] = 'Method 2: wp_remote_post not available';
     }
 
     // Method 3: Direct action hook as last resort
-    if (has_action('wp_ajax_nopriv_ai1wm_export') || has_action('wp_ajax_ai1wm_export')) {
+    $has_export_action = has_action('wp_ajax_nopriv_ai1wm_export') || has_action('wp_ajax_ai1wm_export');
+    
+    if ($has_export_action) {
+        $debug_info[] = 'Method 3: Action hook attempting';
+        
         // Set minimum required params for AI1WM
         $_GET['options'] = 'db,themes,plugins,media,uploads';
         $_POST['options'] = 'db,themes,plugins,media,uploads';
+        $_POST['action'] = 'ai1wm_export';
         
         // Temporarily set user as admin for the action
         $current_user = wp_get_current_user();
@@ -255,7 +296,12 @@ function ai1wm_child_create_backup()
             $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
             if (!empty($admin_users)) {
                 wp_set_current_user($admin_users[0]->ID);
+                $debug_info[] = 'Method 3: Set admin user ' . $admin_users[0]->ID;
+            } else {
+                $debug_info[] = 'Method 3: No admin user found';
             }
+        } else {
+            $debug_info[] = 'Method 3: Current user ' . $current_user->ID;
         }
         
         try {
@@ -265,18 +311,24 @@ function ai1wm_child_create_backup()
             
             // Check if output indicates success
             if (!empty($output)) {
+                $debug_info[] = 'Method 3: Action produced output';
                 ai1wm_child_respond(array(
                     'success' => true,
-                    'data' => 'Backup export triggered. Check backup list in a few moments.',
+                    'data' => 'Backup export triggered via action hook.',
                 ));
                 return;
             }
+            $debug_info[] = 'Method 3: Action produced no output';
         } catch (\Exception $e) {
+            $debug_info[] = 'Method 3: Exception - ' . $e->getMessage();
             error_log('[AI1WM Child] Action hook error: ' . $e->getMessage());
         }
+    } else {
+        $debug_info[] = 'Method 3: No wp_ajax_ai1wm_export action found';
     }
 
-    ai1wm_child_respond_error('Unable to trigger AI1WM backup. Please ensure All-in-One WP Migration plugin is properly installed and activated.');
+    // All methods failed - return detailed debug info
+    ai1wm_child_respond_error('Unable to trigger AI1WM backup. All methods failed. Debug: ' . implode('; ', $debug_info));
 }
 
 function ai1wm_child_can_exec()
