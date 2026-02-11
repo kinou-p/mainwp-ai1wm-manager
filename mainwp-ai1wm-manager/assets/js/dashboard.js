@@ -330,11 +330,6 @@
         // First check immediately
         checkBackup();
     }
-                    notify('❌ Erreur réseau: ' + error, 'error');
-                }
-            }
-        });
-    });
 
     /* ==== AJAX: Delete Backup ==== */
     $(document).on('click', '.ai1wm-btn-delete', function (e) {
