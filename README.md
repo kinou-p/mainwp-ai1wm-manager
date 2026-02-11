@@ -204,18 +204,6 @@ mainwp-ai1wm-manager/
 - **Cause**: AI1WM plugin not installed or inactive
 - **Solution**: Install and activate All-in-One WP Migration on the child site
 
-### Timeouts During Backup
-- **Cause**: Backup takes longer than 2 minutes
-- **Solution**: Wait and refresh - the backup continues in the background
-
-### Download Link Expired
-- **Cause**: Tried to use download link after 5 minutes
-- **Solution**: Click download button again to generate a new link
-
-### Updates Not Showing
-- **Cause**: GitHub API cache or incorrect release format
-- **Solution**: See [GITHUB-RELEASES-GUIDE.md](GITHUB-RELEASES-GUIDE.md) troubleshooting section
-
 ### Enable Debug Logging
 
 Add to `wp-config.php`:
@@ -278,6 +266,12 @@ If this plugin helped you manage your backups more efficiently, please consider:
 - 🐛 Reporting bugs or requesting features
 - 🔀 Contributing code improvements
 - 📢 Sharing with other MainWP users
+
+---
+
+## 📄 License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ---
 
