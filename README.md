@@ -125,6 +125,7 @@ You have **two options** for installing the child plugin:
 
 ### Building from Source
 
+**Windows (PowerShell):**
 ```powershell
 # Clone the repository
 git clone https://github.com/kinou-p/mainwp-ai1wm-manager.git
@@ -132,11 +133,24 @@ cd mainwp-ai1wm-manager
 
 # Build ZIP files
 .\build.ps1
-
-# Output files:
-# - mainwp-ai1wm-manager.zip (Dashboard plugin)
-# - mainwp-ai1wm-manager-child.zip (Child plugin)
 ```
+
+**Linux/Mac (Bash):**
+```bash
+# Clone the repository
+git clone https://github.com/kinou-p/mainwp-ai1wm-manager.git
+cd mainwp-ai1wm-manager
+
+# Make the script executable
+chmod +x build.sh
+
+# Build ZIP files
+./build.sh
+```
+
+**Output files:**
+- `mainwp-ai1wm-manager.zip` (Dashboard plugin)
+- `mainwp-ai1wm-manager-child.zip` (Child plugin)
 
 ### Project Structure
 
@@ -160,7 +174,8 @@ mainwp-ai1wm-manager/
 │   ├── mainwp-ai1wm-manager-child.php  # Main plugin file
 │   └── class-github-updater.php    # Auto-update handler
 │
-├── build.ps1                       # Build script
+├── build.ps1                       # Build script (Windows)
+├── build.sh                        # Build script (Linux/Mac)
 └── README.md                       # This file
 
 ```
