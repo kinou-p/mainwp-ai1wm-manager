@@ -385,11 +385,10 @@
         }, function (res) {
             btnLoading($btn, false);
             if (res.success && res.data && res.data.url) {
-                // Open download in new tab
+                // Direct download
                 var a = document.createElement('a');
                 a.href = res.data.url;
                 a.download = file;
-                a.target = '_blank';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -629,7 +628,6 @@
                             var a = document.createElement('a');
                             a.href = dlRes.data.url;
                             a.download = latest.name;
-                            a.target = '_blank';
                             document.body.appendChild(a);
                             a.click();
                             document.body.removeChild(a);

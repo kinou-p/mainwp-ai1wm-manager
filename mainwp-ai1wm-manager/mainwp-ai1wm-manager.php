@@ -3,7 +3,7 @@
  * Plugin Name: MainWP AI1WM Backup Manager
  * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Manage All-in-One WP Migration backups on child sites directly from the MainWP Dashboard.
- * Version:     1.2.0
+ * Version:     1.2.1
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MAINWP_AI1WM_MANAGER_VERSION', '1.2.0');
+define('MAINWP_AI1WM_MANAGER_VERSION', '1.2.1');
 define('MAINWP_AI1WM_MANAGER_FILE', __FILE__);
 define('MAINWP_AI1WM_MANAGER_DIR', plugin_dir_path(__FILE__));
 define('MAINWP_AI1WM_MANAGER_URL', plugin_dir_url(__FILE__));
