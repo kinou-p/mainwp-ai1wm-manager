@@ -108,9 +108,9 @@
             <table class="ai1wm-table" id="ai1wm-sites-table">
                 <thead>
                     <tr>
-                        <th class="cb-col"><input type="checkbox" id="ai1wm-select-all" title="Tout sélectionner"></th>
+                        <th class="cb-col"><input type="checkbox" id="ai1wm-select-all" title="Select all"></th>
                         <th class="ai1wm-sortable" data-sort="name">
-                            <?php esc_html_e('Site Web', 'mainwp-ai1wm-manager'); ?>
+                            <?php esc_html_e('Website', 'mainwp-ai1wm-manager'); ?>
                             <span class="material-icons-round sort-icon">unfold_more</span>
                         </th>
                         <th class="ai1wm-sortable" data-sort="url">
@@ -122,7 +122,7 @@
                             <span class="material-icons-round sort-icon">unfold_more</span>
                         </th>
                         <th class="ai1wm-sortable" data-sort="last-backup" style="width:180px;">
-                            <?php esc_html_e('Dernier Backup', 'mainwp-ai1wm-manager'); ?>
+                            <?php esc_html_e('Last Backup', 'mainwp-ai1wm-manager'); ?>
                             <span class="material-icons-round sort-icon">unfold_more</span>
                         </th>
                         <th style="width:180px;text-align:right;">

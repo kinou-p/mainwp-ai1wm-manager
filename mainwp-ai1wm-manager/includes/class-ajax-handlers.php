@@ -95,7 +95,7 @@ class MainWP_AI1WM_Ajax_Handlers
         if (class_exists('MainWP_AI1WM_Logger')) {
             MainWP_AI1WM_Logger::log('Unexpected response' . $debug, 'error', $site_name);
         }
-        wp_send_json_error('Réponse inattendue du site enfant.' . $debug);
+        wp_send_json_error('Unexpected response from child site.' . $debug);
     }
 
     /* ---------------------------------------------------------------
@@ -115,7 +115,7 @@ class MainWP_AI1WM_Ajax_Handlers
         // Call main class method
         $result = MainWP_AI1WM_Manager::get_instance()->send_to_child($site_id, 'ai1wm_create_backup');
         
-        $this->handle_child_response($result, 'Sauvegarde créée avec succès.', 'Sauvegarde créée.', $site_id);
+        $this->handle_child_response($result, 'Backup created successfully.', 'Backup created.', $site_id);
     }
 
     public function ajax_list_backups()

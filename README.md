@@ -7,7 +7,7 @@
 
 A powerful MainWP extension that allows you to create, list, download, and delete AI1WM backups across all your child sites from a centralized dashboard. Perfect for agencies and site managers handling multiple WordPress installations.
 
-![Dashboard Preview](https://via.placeholder.com/800x400?text=MainWP+AI1WM+Manager+Dashboard)
+![Dashboard Preview](dashboard-preview.png)
 
 ---
 
@@ -83,7 +83,7 @@ You have **two options** for installing the child plugin:
 1. In MainWP Dashboard, go to **MainWP → AI1WM Backups**
 2. Click on a site's dropdown arrow
 3. If the child plugin is installed correctly, you'll see the backup list
-4. If you see "Plugin enfant non détecté", the child plugin is not installed on that site
+4. If you see "Child plugin not detected", the child plugin is not installed on that site
 
 ---
 
@@ -92,13 +92,13 @@ You have **two options** for installing the child plugin:
 ### Creating Backups
 
 **Single Site:**
-- Click the **"Créer Backup"** button next to a site
+- Click the **"Create Backup"** button next to a site
 - Wait for confirmation (backups are created asynchronously)
 - Refresh the backup list after 30-60 seconds
 
 **Multiple Sites (Bulk):**
 - Check the boxes next to sites you want to backup
-- Click **"Créer backups"** in the toolbar
+- Click **"Create backups"** in the toolbar
 - Monitor progress in the progress bar
 - Operations are processed 3 sites at a time to avoid overload
 
@@ -117,7 +117,7 @@ You have **two options** for installing the child plugin:
 
 **Bulk Download (Latest):**
 - Select multiple sites
-- Click **"Télécharger derniers backups"** in toolbar
+- Click **"Download latest backups"** in toolbar
 - Downloads the most recent backup from each site
 
 ### Deleting Backups
@@ -132,8 +132,8 @@ You have **two options** for installing the child plugin:
 - Scroll to the bottom of the dashboard
 - View all recent operations (backups, downloads, deletions)
 - Logs show timestamp, site name, and operation result
-- Click **"Rafraîchir"** to update logs
-- Click **"Effacer l'historique"** to clear all logs
+- Click **"Refresh"** to update logs
+- Click **"Clear history"** to clear all logs
 
 ---
 
@@ -196,7 +196,7 @@ mainwp-ai1wm-manager/
 
 ## 🐛 Troubleshooting
 
-### "Plugin enfant non détecté"
+### "Child plugin not detected"
 - **Cause**: Child plugin not installed on the site
 - **Solution**: Install `mainwp-ai1wm-manager-child.zip` on that child site
 
