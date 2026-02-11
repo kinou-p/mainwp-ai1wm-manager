@@ -3,7 +3,7 @@
  * Plugin Name: MainWP AI1WM Backup Manager
  * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Manage All-in-One WP Migration backups on child sites directly from the MainWP Dashboard.
- * Version:     1.1.0
+ * Version:     1.1.1
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MAINWP_AI1WM_MANAGER_VERSION', '1.1.0');
+define('MAINWP_AI1WM_MANAGER_VERSION', '1.1.1');
 define('MAINWP_AI1WM_MANAGER_FILE', __FILE__);
 define('MAINWP_AI1WM_MANAGER_DIR', plugin_dir_path(__FILE__));
 define('MAINWP_AI1WM_MANAGER_URL', plugin_dir_url(__FILE__));
@@ -939,33 +939,7 @@ class MainWP_AI1WM_Manager
                 var nonce = '<?php echo esc_js(wp_create_nonce('ai1wm_manager_nonce')); ?>';
                 var backupsCache = {}; // site_id -> backups array
 
-                /* ==== Install Child Plugin ==== */
-                $(document).on('click', '.ai1wm-install-child', function(e) {
-                    e.preventDefault();
-                    var $btn = $(this);
-                    var siteId = $btn.data('site-id');
-                    
-                    if($btn.prop('disabled')) return;
-                    
-                    $btn.prop('disabled', true).html('<span class="ai1wm-spinner"></span> ...');
-                    
-                    $.post(ajaxurl, {
-                        action: 'ai1wm_install_child',
-                        site_id: siteId,
-                        _nonce: nonce
-                    }, function(res) {
-                        if(res.success) {
-                            $btn.replaceWith('<span style="color:var(--ai-success);font-size:13px;font-weight:500;"><span class="material-icons-round" style="font-size:16px;vertical-align:text-bottom;">check_circle</span> Installé</span>');
-                            setTimeout(function() { location.reload(); }, 2000);
-                        } else {
-                            alert('Erreur: ' + (res.data || 'Inconnue'));
-                            $btn.prop('disabled', false).html('<span class="material-icons-round">download</span> Réessayer');
-                        }
-                    }).fail(function() {
-                        alert('Erreur de communication.');
-                        $btn.prop('disabled', false).html('<span class="material-icons-round">download</span> Réessayer');
-                    });
-                });
+
 
                 /* ==== Notifications ==== */
                 function notify(msg, type) {
@@ -1094,7 +1068,24 @@ class MainWP_AI1WM_Manager
                         if (res.success) {
                             renderBackups(siteId, res.data);
                         } else {
-                            $content.html('<p style="color:var(--ai-danger);">Erreur : ' + esc(res.data || 'Inconnue') + '</p>');
+                            if (res.data === 'PLUGIN_MISSING') {
+                                // Close accordion
+                                var $toggle = $('.ai1wm-toggle[data-site-id="' + siteId + '"]');
+                                $toggle.removeClass('open');
+                                $('.ai1wm-backups-row[data-site-id="' + siteId + '"]').slideUp(150);
+
+                                // Show install button
+                                var $actions = $('.ai1wm-btn-create[data-site-id="' + siteId + '"]').closest('.ai1wm-actions');
+                                $actions.html(
+                                    '<button class="ai1wm-btn ai1wm-btn-secondary ai1wm-install-child" ' +
+                                    'data-site-id="' + siteId + '" title="Installer le plugin enfant">' +
+                                    '<span class="material-icons-round">download</span> Installer' +
+                                    '</button>'
+                                );
+                                notify('Plugin enfant non détecté. Bouton d\'installation affiché.', 'warning');
+                            } else {
+                                $content.html('<p style="color:var(--ai-danger);">Erreur : ' + esc(res.data || 'Inconnue') + '</p>');
+                            }
                         }
                         if (callback) callback(res.success);
                     }).fail(function () {
@@ -1334,33 +1325,17 @@ class MainWP_AI1WM_Manager
             return $sites;
         }
 
-        // Fetch plugins list as well
         $results = $wpdb->get_results(
-            "SELECT id, name, url, plugins FROM {$table} ORDER BY name ASC",
+            "SELECT id, name, url FROM {$table} ORDER BY name ASC",
             ARRAY_A
         );
 
         if ($results) {
             foreach ($results as $row) {
-                $is_installed = false;
-                $plugins = json_decode($row['plugins'], true);
-                if (is_array($plugins)) {
-                    foreach ($plugins as $plugin) {
-                        // Check for our child plugin slug
-                        if (strpos($plugin['slug'], 'mainwp-ai1wm-manager-child.php') !== false || $plugin['slug'] == 'mainwp-ai1wm-manager-child/mainwp-ai1wm-manager-child.php') {
-                            if ($plugin['active']) {
-                                $is_installed = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
                 $sites[] = array(
                     'id' => intval($row['id']),
                     'name' => $row['name'],
-                    'url' => $row['url'],
-                    'is_installed' => $is_installed
+                    'url' => $row['url']
                 );
             }
         }
@@ -1461,6 +1436,8 @@ class MainWP_AI1WM_Manager
             }
         }
 
+
+
         if (is_object($result)) {
             $arr = (array) $result;
             if (isset($arr['error'])) {
@@ -1537,5 +1514,87 @@ class MainWP_AI1WM_Manager
         }
         $result = $this->send_to_child($site_id, 'ai1wm_download_backup', array('file_name' => $file_name));
         $this->handle_child_response($result, 'URL récupérée.', null);
+    }
+
+    public function ajax_install_child()
+    {
+        check_ajax_referer('ai1wm_manager_nonce', '_nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permissions insuffisantes.');
+        }
+
+        $site_id = isset($_POST['site_id']) ? intval($_POST['site_id']) : 0;
+        if (!$site_id) {
+            wp_send_json_error('ID de site invalide.');
+        }
+
+        // 1. Get latest release asset URL from GitHub
+        $github_repo = 'kinou-p/mainwp-ai1wm-manager';
+        $asset_name = 'mainwp-ai1wm-manager-child.zip';
+        $download_url = '';
+
+        $response = wp_remote_get("https://api.github.com/repos/{$github_repo}/releases/latest");
+        if (is_wp_error($response) || 200 !== wp_remote_retrieve_response_code($response)) {
+            wp_send_json_error('Impossible de récupérer les infos de release GitHub.');
+        }
+
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+        if (!empty($data['assets'])) {
+            foreach ($data['assets'] as $asset) {
+                if ($asset['name'] === $asset_name) {
+                    $download_url = $asset['browser_download_url'];
+                    break;
+                }
+            }
+        }
+
+        if (empty($download_url)) {
+            wp_send_json_error('Actif introuvable dans la dernière release.');
+        }
+
+        // 2. Install on child site via MainWP
+        // remove 'action' as it is defined by the function name in fetch_url_authed
+        $post_data = array(
+            'type' => 'plugin',
+            'url' => $download_url,
+            'name' => 'mainwp-ai1wm-manager-child/mainwp-ai1wm-manager-child.php', // Helpful for activation
+            'activate' => 'yes',
+            'overwrite' => 'yes'
+        );
+
+        try {
+            $result = null;
+
+            // Use MainWP_Connect to perform standard actions
+            if (class_exists('\MainWP\Dashboard\MainWP_DB') && class_exists('\MainWP\Dashboard\MainWP_Connect')) {
+                $website = \MainWP\Dashboard\MainWP_DB::instance()->get_website_by_id($site_id);
+                if ($website) {
+                    $result = \MainWP\Dashboard\MainWP_Connect::fetch_url_authed(
+                        $website,
+                        'install_plugintheme',
+                        $post_data
+                    );
+                } else {
+                    wp_send_json_error('Site non trouvé.');
+                }
+            } else {
+                wp_send_json_error('MainWP Dashboard classes non trouvées.');
+            }
+
+            // Handle response - MainWP usually returns {status: SUCCESS} or similar for installs
+            if (is_array($result) && isset($result['status']) && $result['status'] === 'SUCCESS') {
+                wp_send_json_success('Plugin installé et activé.');
+            } elseif (is_string($result) && strtoupper($result) === 'SUCCESS') {
+                wp_send_json_success('Plugin installé.');
+            } elseif (isset($result['error'])) {
+                wp_send_json_error('Erreur installation: ' . $result['error']);
+            } else {
+                // Optimistic success if no error
+                wp_send_json_success('Commande envoyée. Vérifiez le site enfant.');
+            }
+
+        } catch (\Exception $e) {
+            wp_send_json_error('Exception MainWP: ' . $e->getMessage());
+        }
     }
 }
