@@ -26,22 +26,6 @@ A powerful MainWP extension that allows you to create, list, download, and delet
 
 ---
 
-## 📋 Requirements
-
-### Dashboard Requirements (MainWP Server)
-- WordPress 5.8 or higher
-- MainWP Dashboard plugin 4.0 or higher
-- PHP 7.4 or higher
-- MySQL 5.6 or higher
-
-### Child Site Requirements
-- WordPress 5.8 or higher
-- MainWP Child plugin 4.0 or higher
-- All-in-One WP Migration plugin (free or premium)
-- PHP 7.4 or higher
-
----
-
 ## 🚀 Installation
 
 ### Step 1: Install on MainWP Dashboard
@@ -57,7 +41,7 @@ A powerful MainWP extension that allows you to create, list, download, and delet
    - Click **Activate Plugin**
 
 3. **Access the Dashboard**
-   - Navigate to **MainWP → AI1WM Backups**
+   - Navigate to **MainWP → Backups** or **MainWP → Sites → Backups → AI1WM Backups**
    - You'll see all your connected child sites
 
 ### Step 2: Install on Child Sites
