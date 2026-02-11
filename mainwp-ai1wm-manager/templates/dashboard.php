@@ -71,11 +71,11 @@
             </div>
             <div class="ai1wm-stat-card glass-panel">
                 <div>
-                    <div class="stat-label">Erreurs</div>
-                    <div class="stat-value" id="ai1wm-stat-errors">0</div>
+                    <div class="stat-label">Taille Totale</div>
+                    <div class="stat-value" id="ai1wm-stat-total-size" style="font-size:18px;">–</div>
                 </div>
-                <div class="ai1wm-stat-icon green">
-                    <span class="material-icons-round">check_circle</span>
+                <div class="ai1wm-stat-icon blue">
+                    <span class="material-icons-round">sd_card</span>
                 </div>
             </div>
         </div>

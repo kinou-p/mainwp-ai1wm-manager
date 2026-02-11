@@ -1,7 +1,7 @@
 # MainWP AI1WM Backup Manager
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
-[![Version](https://img.shields.io/badge/version-1.2.0-green.svg)](https://github.com/kinou-p/mainwp-ai1wm-manager/releases)
+[![Version](https://img.shields.io/badge/version-0.20-green.svg)](https://github.com/kinou-p/mainwp-ai1wm-manager/releases)
 [![MainWP](https://img.shields.io/badge/MainWP-Compatible-orange.svg)](https://mainwp.com/)
 
 **Manage All-in-One WP Migration backups on child sites directly from your MainWP Dashboard.**
@@ -237,7 +237,7 @@ Check logs in `wp-content/debug.log`
 
 ## 📝 Changelog
 
-### Version 1.2.0 (2026-02-11)
+### Version 0.20 (2026-02-11)
 
 **Security:**
 - Added secure download system with temporary tokens

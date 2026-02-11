@@ -3,7 +3,7 @@
  * Plugin Name: MainWP AI1WM Manager - Child
  * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Child site companion for MainWP AI1WM Backup Manager. Handles backup requests from the Dashboard.
- * Version:     1.2.1
+ * Version:     0.2.1
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
@@ -410,8 +410,14 @@ function ai1wm_child_secure_download_handler()
         wp_die('Download link expired or invalid.', 'Error', array('response' => 403));
     }
 
-    // Delete token (one-time use)
-    delete_transient('ai1wm_dl_token_' . $token);
+    // Check if token is expired
+    if (isset($token_data['expiry']) && time() > $token_data['expiry']) {
+        delete_transient('ai1wm_dl_token_' . $token);
+        wp_die('Download link expired.', 'Error', array('response' => 403));
+    }
+
+    // Don't delete token - allow retries within expiry window (30 minutes)
+    // Token will be automatically deleted by WordPress when it expires
 
     // Verify file
     $backups_dir = ai1wm_child_get_backups_dir();

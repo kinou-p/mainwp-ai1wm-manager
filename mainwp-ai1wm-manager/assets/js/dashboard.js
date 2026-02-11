@@ -124,15 +124,21 @@
     function updateStats() {
         var totalBackups = 0;
         var latestDate = '';
+        var totalSize = 0;
         for (var sid in backupsCache) {
             var arr = backupsCache[sid];
             if (arr && arr.length) {
                 totalBackups += arr.length;
                 if (arr[0].date && arr[0].date > latestDate) latestDate = arr[0].date;
+                // Sum all backup sizes
+                for (var i = 0; i < arr.length; i++) {
+                    if (arr[i].size) totalSize += arr[i].size;
+                }
             }
         }
         $('#ai1wm-stat-backups').text(totalBackups || '–');
         $('#ai1wm-stat-last').text(latestDate || '–');
+        $('#ai1wm-stat-total-size').text(totalSize > 0 ? fmtSize(totalSize) : '–');
     }
     $(document).on('change', '.ai1wm-site-cb', updateSelectionUI);
     $(document).on('change', '#ai1wm-select-all', function () {
@@ -385,14 +391,18 @@
         }, function (res) {
             btnLoading($btn, false);
             if (res.success && res.data && res.data.url) {
-                // Direct download
-                var a = document.createElement('a');
-                a.href = res.data.url;
-                a.download = file;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                notify('✅ Téléchargement lancé !', 'success');
+                // Direct download with error handling
+                try {
+                    var a = document.createElement('a');
+                    a.href = res.data.url;
+                    a.download = file;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    notify('✅ Téléchargement lancé !', 'success');
+                } catch (err) {
+                    notify('❌ Erreur lors du téléchargement: ' + err.message, 'error');
+                }
             } else {
                 notify('❌ ' + (res.data || 'Téléchargement impossible'), 'error');
             }
@@ -590,7 +600,7 @@
 
         var $prog = $('#ai1wm-bulk-progress').show();
         $('#ai1wm-bulk-title').text('Téléchargement des derniers backups…');
-        var done = 0, total = ids.length, ok = 0;
+        var done = 0, total = ids.length, ok = 0, errors = 0;
 
         function updateProgress() {
             done++;
@@ -601,7 +611,7 @@
                 setTimeout(function () { $prog.slideUp(200); }, 2000);
                 var msg = ok === total 
                     ? '✅ Téléchargement lancé pour ' + ok + ' backup(s).' 
-                    : '⚠️ Téléchargement : ' + ok + '/' + total + ' réussi(s).';
+                    : '⚠️ Téléchargement : ' + ok + ' réussi(s), ' + errors + ' erreur(s).';
                 notify(msg, ok === total ? 'success' : 'warning');
                 loadLogs();
             }
@@ -625,20 +635,33 @@
                         _nonce: nonce
                     }, function (dlRes) {
                         if (dlRes.success && dlRes.data && dlRes.data.url) {
-                            var a = document.createElement('a');
-                            a.href = dlRes.data.url;
-                            a.download = latest.name;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            ok++;
+                            try {
+                                var a = document.createElement('a');
+                                a.href = dlRes.data.url;
+                                a.download = latest.name;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                ok++;
+                            } catch (err) {
+                                errors++;
+                            }
+                        } else {
+                            errors++;
                         }
                         updateProgress();
-                    }).fail(function () { updateProgress(); });
+                    }).fail(function () { 
+                        errors++;
+                        updateProgress(); 
+                    });
                 } else {
+                    errors++;
                     updateProgress();
                 }
-            }).fail(function () { updateProgress(); });
+            }).fail(function () { 
+                errors++;
+                updateProgress(); 
+            });
         }
 
         $.each(ids, function (i, siteId) {
