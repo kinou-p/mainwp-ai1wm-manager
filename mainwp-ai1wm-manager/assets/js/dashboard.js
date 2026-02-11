@@ -210,6 +210,12 @@
         if (!confirm('Lancer une nouvelle sauvegarde sur ce site ?')) return;
         btnLoading($btn, true);
 
+        // Get current backup count before starting
+        var initialBackupCount = 0;
+        if (backupsCache[siteId] && backupsCache[siteId].length) {
+            initialBackupCount = backupsCache[siteId].length;
+        }
+
         // Add visual indicator in the row
         var $row = $('.ai1wm-site-row[data-site-id="' + siteId + '"]');
         var $statusBadge = $('<span class="ai1wm-backup-status" style="margin-left:10px;padding:4px 8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:4px;font-size:11px;color:#3b82f6;"><span class="ai1wm-spinner ai1wm-spinner-sm" style="display:inline-block;width:10px;height:10px;margin-right:5px;"></span>Backup en cours...</span>');
@@ -229,21 +235,11 @@
                 $statusBadge.remove();
                 
                 if (res.success) {
-                    notify('✅ Sauvegarde lancée ! La création peut prendre quelques minutes...', 'success');
-                    delete backupsCache[siteId];
+                    notify('✅ Sauvegarde lancée ! La création peut prendre jusqu\'à 20 minutes...', 'success');
                     loadLogs(); // Refresh logs immediately
                     
-                    // Show "processing" badge
-                    var $processingBadge = $('<span class="ai1wm-backup-status" style="margin-left:10px;padding:4px 8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;font-size:11px;color:#22c55e;">⚙️ Traitement...</span>');
-                    $row.find('.site-name').append($processingBadge);
-                    
-                    // Auto-refresh after 30 seconds to check if backup is complete
-                    setTimeout(function() {
-                        loadBackups(siteId);
-                        loadLogs(); // Refresh logs again
-                        $processingBadge.remove();
-                        notify('🔄 Vérification du statut de la sauvegarde...', 'info');
-                    }, 30000);
+                    // Start intelligent polling
+                    startBackupPolling(siteId, initialBackupCount, $row);
                 } else {
                     notify('❌ ' + (res.data || 'Erreur'), 'error');
                     loadLogs(); // Refresh logs even on error
@@ -258,6 +254,82 @@
                     // Still try to refresh after timeout
                     setTimeout(function() { loadBackups(siteId); }, 60000);
                 } else {
+                    notify('❌ Erreur réseau: ' + error, 'error');
+                }
+            }
+        });
+    });
+
+    /* ==== Smart Backup Polling System ==== */
+    function startBackupPolling(siteId, initialCount, $row) {
+        var startTime = Date.now();
+        var maxDuration = 20 * 60 * 1000; // 20 minutes
+        var pollInterval = 15 * 1000; // 15 seconds
+        var pollTimer;
+        
+        // Show processing badge with timer
+        var $processingBadge = $('<span class="ai1wm-backup-status" style="margin-left:10px;padding:4px 8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;font-size:11px;color:#22c55e;"><span class="ai1wm-spinner ai1wm-spinner-sm" style="display:inline-block;width:10px;height:10px;margin-right:5px;"></span>⏳ 0:00</span>');
+        $row.find('.site-name').append($processingBadge);
+        
+        function updateTimer() {
+            var elapsed = Math.floor((Date.now() - startTime) / 1000);
+            var minutes = Math.floor(elapsed / 60);
+            var seconds = elapsed % 60;
+            var timeStr = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            $processingBadge.html('<span class="ai1wm-spinner ai1wm-spinner-sm" style="display:inline-block;width:10px;height:10px;margin-right:5px;"></span>⏳ ' + timeStr);
+        }
+        
+        function checkBackup() {
+            var elapsed = Date.now() - startTime;
+            
+            // Update timer display
+            updateTimer();
+            
+            // Check if max duration exceeded
+            if (elapsed > maxDuration) {
+                clearInterval(pollTimer);
+                $processingBadge.remove();
+                notify('⏱️ Timeout : Aucun nouveau backup après 20 minutes. Vérifiez manuellement.', 'error');
+                loadLogs();
+                return;
+            }
+            
+            // Poll backup list
+            $.post(ajaxurl, {
+                action: 'ai1wm_list_backups',
+                site_id: siteId,
+                _nonce: nonce
+            }, function (res) {
+                if (res.success && res.data) {
+                    var currentCount = res.data.length;
+                    
+                    // Check if new backup appeared
+                    if (currentCount > initialCount) {
+                        clearInterval(pollTimer);
+                        $processingBadge.remove();
+                        
+                        // Update cache and display
+                        renderBackups(siteId, res.data);
+                        
+                        var elapsedMin = Math.floor(elapsed / 60000);
+                        var elapsedSec = Math.floor((elapsed % 60000) / 1000);
+                        var timeMsg = elapsedMin > 0 ? elapsedMin + 'min ' + elapsedSec + 's' : elapsedSec + 's';
+                        
+                        notify('✅ Backup terminé avec succès ! (' + timeMsg + ')', 'success');
+                        loadLogs();
+                    }
+                }
+            }).fail(function() {
+                // Network error - continue polling
+            });
+        }
+        
+        // Start polling every 15 seconds
+        pollTimer = setInterval(checkBackup, pollInterval);
+        
+        // First check immediately
+        checkBackup();
+    }
                     notify('❌ Erreur réseau: ' + error, 'error');
                 }
             }
