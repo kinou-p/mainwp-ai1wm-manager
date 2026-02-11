@@ -197,8 +197,15 @@ class MainWP_AI1WM_Manager
                 );
             }
         } catch (\Exception $e) {
-            error_log('[AI1WM Manager] Exception: ' . $e->getMessage());
-            return array('error' => 'MainWP request failed: ' . $e->getMessage());
+            $error_message = $e->getMessage();
+            error_log('[AI1WM Manager] Exception for site ID ' . $site_id . ': ' . $error_message);
+            
+            // Helpful context for "NOMAINWP"
+            if (strpos($error_message, 'NOMAINWP') !== false) {
+                 $error_message .= ' (MainWP Dashboard verification failed. Ensure the extension is properly registered or the file path is correct.)';
+            }
+            
+            return array('error' => 'MainWP Request Failed: ' . $error_message . ' [Action: ' . $action . ']');
         }
 
         if (defined('WP_DEBUG') && WP_DEBUG) {

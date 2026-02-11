@@ -47,10 +47,13 @@ class MainWP_AI1WM_Ajax_Handlers
 
         if (is_array($result)) {
             if (isset($result['error']) && !empty($result['error'])) {
+                $error_msg = $result['error'];
                 if (class_exists('MainWP_AI1WM_Logger')) {
-                    MainWP_AI1WM_Logger::log('Error: ' . $result['error'], 'error', $site_name);
+                    // Add site name if available to the log message
+                    $log_msg = 'Error' . ($site_name ? " [$site_name]" : '') . ': ' . $error_msg;
+                    MainWP_AI1WM_Logger::log($log_msg, 'error', $site_name);
                 }
-                wp_send_json_error($result['error']);
+                wp_send_json_error($error_msg);
                 return;
             }
             if (isset($result['success']) && $result['success']) {
