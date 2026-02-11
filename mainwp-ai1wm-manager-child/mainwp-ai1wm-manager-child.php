@@ -177,231 +177,70 @@ function ai1wm_child_ensure_htaccess($dir)
 
 function ai1wm_child_create_backup()
 {
-    $debug_info = array();
-    
-    // Check that All-in-One WP Migration is active with detailed diagnostics
-    $has_constant = defined('AI1WM_PLUGIN_NAME');
-    $has_class = class_exists('Ai1wm_Main_Controller');
-    $has_export_class = class_exists('Ai1wm_Export_Controller');
-    
-    $debug_info[] = 'AI1WM_PLUGIN_NAME: ' . ($has_constant ? 'Yes' : 'No');
-    $debug_info[] = 'Ai1wm_Main_Controller: ' . ($has_class ? 'Yes' : 'No');
-    $debug_info[] = 'Ai1wm_Export_Controller: ' . ($has_export_class ? 'Yes' : 'No');
-    
-    if (!$has_constant && !$has_class) {
-        ai1wm_child_respond_error('AI1WM not active. Debug: ' . implode(', ', $debug_info));
+    // Check that All-in-One WP Migration is active
+    if (!defined('AI1WM_PLUGIN_NAME') && !class_exists('Ai1wm_Main_Controller')) {
+        ai1wm_child_respond_error('All-in-One WP Migration is not active on this site.');
         return;
     }
 
-    // Method 1: Use AI1WM's internal API via HTTP request (MOST RELIABLE - works everywhere)
-    if (function_exists('wp_remote_post')) {
-        $debug_info[] = 'Method 1: wp_remote_post attempting';
-        
-        // Get AI1WM secret key for authentication
-        $secret_key = get_option('ai1wm_secret_key', '');
-        
-        // Build the export options as AI1WM expects them
-        $export_options = array(
-            'action' => 'ai1wm_export',
-            'secret_key' => $secret_key,
-            'options' => wp_json_encode(array('action' => 'export')),
-        );
-
-        // Make internal request to AI1WM's AJAX handler
-        $admin_url = admin_url('admin-ajax.php');
-        $response = wp_remote_post($admin_url, array(
-            'body' => $export_options,
-            'timeout' => 300,
-            'cookies' => $_COOKIE,
-            'sslverify' => false,
-        ));
-
-        if (!is_wp_error($response)) {
-            $body = wp_remote_retrieve_body($response);
-            $code = wp_remote_retrieve_response_code($response);
-            $data = json_decode($body, true);
-            
-            $debug_info[] = 'Method 1: HTTP ' . $code;
-            
-            // AI1WM returns a status file that tracks the export progress
-            if (isset($data['status']) || isset($data['progress'])) {
-                ai1wm_child_respond(array(
-                    'success' => true,
-                    'data' => 'Backup export started via AJAX.',
-                ));
-                return;
-            }
-            
-            // Check if we got any positive response (even empty 200 can mean success for background tasks)
-            if ($code === 200) {
-                // AI1WM often returns empty body for async operations
-                ai1wm_child_respond(array(
-                    'success' => true,
-                    'data' => 'Backup export initiated via AJAX (async).',
-                ));
-                return;
-            }
-            
-            $debug_info[] = 'Method 1: No success (body: ' . substr($body, 0, 100) . ')';
-        } else {
-            $debug_info[] = 'Method 1: WP_Error - ' . $response->get_error_message();
-        }
-    } else {
-        $debug_info[] = 'Method 1: wp_remote_post not available';
+    // Check that wp_remote_post is available
+    if (!function_exists('wp_remote_post')) {
+        ai1wm_child_respond_error('wp_remote_post function not available.');
+        return;
     }
 
-    // Method 2: Direct function call if AI1WM classes are available
-    if ($has_export_class && class_exists('Ai1wm_Export_Controller')) {
-        $debug_info[] = 'Method 2: Direct class call attempting';
-        
-        try {
-            // Set up the export options as AI1WM expects
-            $_POST['options'] = wp_json_encode(array(
-                'action' => 'export',
-            ));
-            $_POST['secret_key'] = get_option('ai1wm_secret_key', '');
-            
-            // Call the export method directly
-            $controller = new Ai1wm_Export_Controller();
-            if (method_exists($controller, 'export')) {
-                ob_start();
-                $controller->export();
-                $output = ob_get_clean();
-                
-                if (!empty($output)) {
-                    $debug_info[] = 'Method 2: Export initiated';
-                    ai1wm_child_respond(array(
-                        'success' => true,
-                        'data' => 'Backup export started via direct call.',
-                    ));
-                    return;
-                }
-                $debug_info[] = 'Method 2: Export called but no output';
-            } else {
-                $debug_info[] = 'Method 2: export() method not found';
-            }
-        } catch (\Exception $e) {
-            $debug_info[] = 'Method 2: Exception - ' . $e->getMessage();
-        }
-    } else {
-        $debug_info[] = 'Method 2: Ai1wm_Export_Controller not available';
-    }
-
-    // Method 3: Direct action hook
-    $has_export_action = has_action('wp_ajax_nopriv_ai1wm_export') || has_action('wp_ajax_ai1wm_export');
+    // Get AI1WM secret key for authentication
+    $secret_key = get_option('ai1wm_secret_key', '');
     
-    if ($has_export_action) {
-        $debug_info[] = 'Method 3: Action hook attempting';
-        
-        // Set minimum required params for AI1WM
-        $_GET['options'] = 'db,themes,plugins,media,uploads';
-        $_POST['options'] = wp_json_encode(array('action' => 'export'));
-        $_POST['action'] = 'ai1wm_export';
-        $_POST['secret_key'] = get_option('ai1wm_secret_key', '');
-        
-        // Temporarily set user as admin for the action
-        $current_user = wp_get_current_user();
-        if ($current_user->ID === 0) {
-            // Find first admin user
-            $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
-            if (!empty($admin_users)) {
-                wp_set_current_user($admin_users[0]->ID);
-                $debug_info[] = 'Method 3: Set admin user ' . $admin_users[0]->ID;
-            } else {
-                $debug_info[] = 'Method 3: No admin user found';
-            }
-        } else {
-            $debug_info[] = 'Method 3: Current user ' . $current_user->ID;
-        }
-        
-        try {
-            ob_start();
-            do_action('wp_ajax_ai1wm_export');
-            $output = ob_get_clean();
-            
-            // Check if output indicates success
-            if (!empty($output)) {
-                $debug_info[] = 'Method 3: Action produced output';
-                ai1wm_child_respond(array(
-                    'success' => true,
-                    'data' => 'Backup export triggered via action hook.',
-                ));
-                return;
-            }
-            $debug_info[] = 'Method 3: Action produced no output';
-        } catch (\Exception $e) {
-            $debug_info[] = 'Method 3: Exception - ' . $e->getMessage();
-            error_log('[AI1WM Child] Action hook error: ' . $e->getMessage());
-        }
-    } else {
-        $debug_info[] = 'Method 3: No wp_ajax_ai1wm_export action found';
+    // Build the export options as AI1WM expects them
+    $export_options = array(
+        'action' => 'ai1wm_export',
+        'secret_key' => $secret_key,
+        'options' => wp_json_encode(array('action' => 'export')),
+    );
+
+    // Make internal request to AI1WM's AJAX handler
+    $admin_url = admin_url('admin-ajax.php');
+    $response = wp_remote_post($admin_url, array(
+        'body' => $export_options,
+        'timeout' => 300,
+        'cookies' => $_COOKIE,
+        'sslverify' => false,
+    ));
+
+    if (is_wp_error($response)) {
+        ai1wm_child_respond_error('Request failed: ' . $response->get_error_message());
+        return;
     }
 
-    // Method 4: Try WP-CLI as last resort (least reliable - requires CLI access)
-    if (ai1wm_child_can_exec()) {
-        $debug_info[] = 'Method 4: WP-CLI attempting';
-        $wp_path = ABSPATH;
-        $command = sprintf(
-            'cd %s && wp ai1wm backup --allow-root 2>&1',
-            escapeshellarg(rtrim($wp_path, '/'))
-        );
-        $output = array();
-        $code = 0;
-        exec($command, $output, $code);
-
-        if (0 === $code) {
-            ai1wm_child_respond(array(
-                'success' => true,
-                'data' => 'Backup created via WP-CLI.',
-            ));
-            return;
-        }
-        $debug_info[] = 'Method 4: Failed (exit code ' . $code . ', output: ' . implode(' ', array_slice($output, -2)) . ')';
-    } else {
-        $debug_info[] = 'Method 4: WP-CLI not available';
+    $body = wp_remote_retrieve_body($response);
+    $code = wp_remote_retrieve_response_code($response);
+    $data = json_decode($body, true);
+    
+    // AI1WM returns a status file that tracks the export progress
+    if (isset($data['status']) || isset($data['progress'])) {
+        ai1wm_child_respond(array(
+            'success' => true,
+            'data' => 'Backup export started.',
+        ));
+        return;
     }
-            if (!empty($admin_users)) {
-                wp_set_current_user($admin_users[0]->ID);
-                $debug_info[] = 'Method 4: Set admin user ' . $admin_users[0]->ID;
-            } else {
-                $debug_info[] = 'Method 4: No admin user found';
-            }
-        } else {
-            $debug_info[] = 'Method 4: Current user ' . $current_user->ID;
-        }
-        
-        try {
-            ob_start();
-            do_action('wp_ajax_ai1wm_export');
-            $output = ob_get_clean();
-            
-            // Check if output indicates success
-            if (!empty($output)) {
-                $debug_info[] = 'Method 4: Action produced output';
-                ai1wm_child_respond(array(
-                    'success' => true,
-                    'data' => 'Backup export triggered via action hook.',
-                ));
-                return;
-            }
-            $debug_info[] = 'Method 4: Action produced no output';
-        } catch (\Exception $e) {
-            $debug_info[] = 'Method 4: Exception - ' . $e->getMessage();
-            error_log('[AI1WM Child] Action hook error: ' . $e->getMessage());
-        }
-    } else {
-        $debug_info[] = 'Method 4: No wp_ajax_ai1wm_export action found';
+    
+    // Check if we got HTTP 200 (even empty body can mean success for async operations)
+    if ($code === 200) {
+        ai1wm_child_respond(array(
+            'success' => true,
+            'data' => 'Backup export initiated (async).',
+        ));
+        return;
     }
-
-    // All methods failed - return detailed debug info
-    ai1wm_child_respond_error('Unable to trigger AI1WM backup. All methods failed. Debug: ' . implode('; ', $debug_info));
-}
-
-function ai1wm_child_can_exec()
-{
-    $disabled = explode(',', ini_get('disable_functions'));
-    $disabled = array_map('trim', $disabled);
-    return function_exists('exec') && !in_array('exec', $disabled, true);
+    
+    // If we get here, something went wrong
+    $error_msg = 'Backup creation failed. HTTP ' . $code;
+    if (!empty($body)) {
+        $error_msg .= '. Response: ' . substr($body, 0, 200);
+    }
+    ai1wm_child_respond_error($error_msg);
 }
 
 /* =================================================================
