@@ -216,6 +216,37 @@ Check logs in `wp-content/debug.log`
 
 ---
 
+## 🚧 Roadmap & Planned Features
+
+### 🎯 Scheduled Backups ⭐ (High Priority)
+- **Automatic Scheduling**: Daily, weekly, or monthly backup schedules
+- **Time Selection**: Choose specific backup times to avoid peak hours
+- **Flexible Configuration**: Per-site or global schedule settings
+- **Retention Management**: Automatically keep X most recent backups
+
+### 🗂️ Backup Retention Policy
+- **Auto-Cleanup**: Automatic deletion of old backups based on age
+- **Configurable Rules**: Keep backups for 7 days, 4 weeks, or 12 months
+- **Smart Preservation**: Tag and protect important manual backups from auto-deletion
+- **Storage Optimization**: Free up space automatically while maintaining backup history
+
+### 📧 Email Notifications
+- **Failure Alerts**: Instant notifications when backups fail
+- **Scheduled Reports**: Daily or weekly backup status summaries
+- **Staleness Warnings**: Alerts when sites haven't been backed up recently
+- **Bulk Operation Summaries**: Detailed reports after bulk backup operations
+- **Customizable Recipients**: Send notifications to multiple email addresses
+
+### ☁️ Storage Management
+- **External Storage**: Offload backups to Dropbox, Google Drive, or Amazon S3
+- **Disk Space Monitoring**: Real-time storage statistics per site
+- **Low Space Alerts**: Automatic warnings when disk space is running low
+- **Distributed Storage**: Reduce load on individual servers
+
+> **Want to contribute?** Check out the [Contributing](#contributing) section below to help implement these features!
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
