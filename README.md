@@ -5,7 +5,7 @@
 
 **Manage All-in-One WP Migration backups on child sites directly from your MainWP Dashboard.**
 
-A powerful MainWP extension that allows you to create, list, download, and delete AI1WM backups across all your child sites from a centralized dashboard. Perfect for agencies and site managers handling multiple WordPress installations.
+A MainWP extension that allows you to create, list, download, and delete AI1WM backups across all your child sites from a centralized dashboard.
 
 ![Dashboard Preview](dashboard-preview.png)
 
