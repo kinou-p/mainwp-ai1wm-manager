@@ -37,8 +37,17 @@
 
     /* ==== Notifications ==== */
     function notify(msg, type) {
-        type = type || 'info';
-        var $el = $('<div class="ai1wm-notice ai1wm-notice-' + type + '">' + msg + '</div>');
+        var allowedTypes = {
+            info: true,
+            success: true,
+            error: true,
+            warning: true
+        };
+        type = allowedTypes[type] ? type : 'info';
+        var $el = $('<div></div>')
+            .addClass('ai1wm-notice')
+            .addClass('ai1wm-notice-' + type)
+            .text(String(msg));
         $('body').append($el);
         setTimeout(function () { $el.fadeOut(300, function () { $el.remove(); }); }, 4000);
     }
@@ -200,7 +209,7 @@
             if (status === 'timeout') {
                 $content.html('<p style="color:var(--ai-danger);">⏱️ Timeout - Site not responding.</p>');
             } else {
-                $content.html('<p style="color:var(--ai-danger);">❌ Network error: ' + error + '</p>');
+                $content.html('<p style="color:var(--ai-danger);">❌ Network error: ' + esc(error || 'Unknown') + '</p>');
             }
             if (callback) callback(false);
         });

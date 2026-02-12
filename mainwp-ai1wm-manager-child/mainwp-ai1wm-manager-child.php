@@ -3,7 +3,7 @@
  * Plugin Name: MainWP AI1WM Manager - Child
  * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Child site companion for MainWP AI1WM Backup Manager. Handles backup requests from the Dashboard.
- * Version:     0.2.2
+ * Version:     0.2.3
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
