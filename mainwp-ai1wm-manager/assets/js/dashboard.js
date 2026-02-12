@@ -96,22 +96,46 @@
             return;
         }
 
-        var h = '<table class="ai1wm-backups-list"><thead><tr>' +
-            '<th>Fichier</th><th>Date</th><th>Taille</th><th style="width:140px;text-align:right;">Actions</th>' +
-            '</tr></thead><tbody>';
+        var $table = $('<table></table>').addClass('ai1wm-backups-list');
+        var $thead = $('<thead><tr><th>Fichier</th><th>Date</th><th>Taille</th><th style="width:140px;text-align:right;">Actions</th></tr></thead>');
+        var $tbody = $('<tbody></tbody>');
 
         $.each(backups, function (i, b) {
-            h += '<tr>' +
-                '<td><span class="material-icons-round file-icon">description</span>' + esc(b.name) + '</td>' +
-                '<td style="color:var(--ai-text-muted);">' + esc(b.date) + '</td>' +
-                '<td style="color:var(--ai-text-muted);">' + fmtSize(b.size) + '</td>' +
-                '<td style="text-align:right;">' +
-                '<button class="ai1wm-btn ai1wm-btn-dl ai1wm-btn-sm" data-site-id="' + siteId + '" data-file="' + esc(b.name) + '"><span class="material-icons-round" style="font-size:16px;">download</span> DL</button> ' +
-                '<button class="ai1wm-btn ai1wm-btn-delete ai1wm-btn-sm" data-site-id="' + siteId + '" data-file="' + esc(b.name) + '"><span class="material-icons-round" style="font-size:16px;">delete_outline</span></button>' +
-                '</td></tr>';
+            var fileName = b && b.name ? String(b.name) : '';
+            var fileDate = b && b.date ? String(b.date) : '';
+            var fileSize = fmtSize(b && b.size ? b.size : 0);
+
+            var $tr = $('<tr></tr>');
+
+            var $nameCell = $('<td></td>');
+            $nameCell.append($('<span></span>').addClass('material-icons-round file-icon').text('description'));
+            $nameCell.append(document.createTextNode(fileName));
+
+            var $dateCell = $('<td></td>').css('color', 'var(--ai-text-muted)').text(fileDate);
+            var $sizeCell = $('<td></td>').css('color', 'var(--ai-text-muted)').text(fileSize);
+
+            var $actionsCell = $('<td></td>').css('text-align', 'right');
+            var $downloadBtn = $('<button></button>')
+                .addClass('ai1wm-btn ai1wm-btn-dl ai1wm-btn-sm')
+                .attr('data-site-id', siteId)
+                .attr('data-file', fileName);
+            $downloadBtn.append($('<span></span>').addClass('material-icons-round').css('font-size', '16px').text('download'));
+            $downloadBtn.append(document.createTextNode(' DL'));
+
+            var $deleteBtn = $('<button></button>')
+                .addClass('ai1wm-btn ai1wm-btn-delete ai1wm-btn-sm')
+                .attr('data-site-id', siteId)
+                .attr('data-file', fileName);
+            $deleteBtn.append($('<span></span>').addClass('material-icons-round').css('font-size', '16px').text('delete_outline'));
+
+            $actionsCell.append($downloadBtn).append(document.createTextNode(' ')).append($deleteBtn);
+
+            $tr.append($nameCell).append($dateCell).append($sizeCell).append($actionsCell);
+            $tbody.append($tr);
         });
-        h += '</tbody></table>';
-        $content.html(h);
+
+        $table.append($thead).append($tbody);
+        $content.empty().append($table);
 
         // Update stats
         updateStats();
@@ -153,6 +177,20 @@
     $(document).on('change', '#ai1wm-select-all', function () {
         $('.ai1wm-site-cb').prop('checked', $(this).is(':checked'));
         updateSelectionUI();
+    });
+
+    $(document).on('click', '.ai1wm-site-row', function (e) {
+        if ($(e.target).closest('a, button, input, label, .ai1wm-toggle, .ai1wm-actions').length) {
+            return;
+        }
+
+        var siteId = $(this).data('site-id');
+        if (!siteId) return;
+
+        var $toggle = $('.ai1wm-toggle[data-site-id="' + siteId + '"]');
+        if ($toggle.length) {
+            $toggle.trigger('click');
+        }
     });
 
     /* ==== Toggle Dropdown ==== */

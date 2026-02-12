@@ -46,6 +46,14 @@ class MainWP_AI1WM_Ajax_Handlers
         }
 
         if (is_array($result)) {
+            if (empty($result)) {
+                if (class_exists('MainWP_AI1WM_Logger')) {
+                    MainWP_AI1WM_Logger::log('Child plugin not detected or invalid response.', 'error', $site_name);
+                }
+                wp_send_json_error('PLUGIN_MISSING');
+                return;
+            }
+
             if (isset($result['error']) && !empty($result['error'])) {
                 $error_msg = $result['error'];
                 if (class_exists('MainWP_AI1WM_Logger')) {
@@ -78,6 +86,14 @@ class MainWP_AI1WM_Ajax_Handlers
 
         if (is_object($result)) {
             $arr = (array) $result;
+            if (empty($arr)) {
+                if (class_exists('MainWP_AI1WM_Logger')) {
+                    MainWP_AI1WM_Logger::log('Child plugin not detected or invalid response.', 'error', $site_name);
+                }
+                wp_send_json_error('PLUGIN_MISSING');
+                return;
+            }
+
             if (isset($arr['error'])) {
                 if (class_exists('MainWP_AI1WM_Logger')) {
                     MainWP_AI1WM_Logger::log('Error: ' . $arr['error'], 'error', $site_name);
