@@ -3,7 +3,7 @@
  * Plugin Name: MainWP AI1WM Manager - Child
  * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Child site companion for MainWP AI1WM Backup Manager. Handles backup requests from the Dashboard.
- * Version:     0.2.3
+ * Version:     0.2.4
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
@@ -21,7 +21,7 @@ add_action('plugins_loaded', function () {
         __FILE__,
         'kinou-p/mainwp-ai1wm-manager',
         'mainwp-ai1wm-manager-child.zip'
-    );
+        );
 });
 
 /**
@@ -91,13 +91,15 @@ function ai1wm_child_respond($data)
 {
     if (class_exists('\MainWP\Child\MainWP_Helper')) {
         \MainWP\Child\MainWP_Helper::write($data);
-    } elseif (class_exists('MainWP_Helper')) {
+    }
+    elseif (class_exists('MainWP_Helper')) {
         MainWP_Helper::write($data);
-    } else {
+    }
+    else {
         // Fallback — should not happen if MainWP Child is active.
         wp_send_json($data);
     }
-    // MainWP_Helper::write() calls die() internally, so we won't reach here.
+// MainWP_Helper::write() calls die() internally, so we won't reach here.
 }
 
 /**
@@ -109,9 +111,11 @@ function ai1wm_child_respond_error($message)
 {
     if (class_exists('\MainWP\Child\MainWP_Helper')) {
         \MainWP\Child\MainWP_Helper::instance()->error($message);
-    } elseif (class_exists('MainWP_Helper') && method_exists('MainWP_Helper', 'instance')) {
+    }
+    elseif (class_exists('MainWP_Helper') && method_exists('MainWP_Helper', 'instance')) {
         MainWP_Helper::instance()->error($message);
-    } else {
+    }
+    else {
         wp_send_json(array('error' => $message));
     }
 }
@@ -125,14 +129,15 @@ function ai1wm_child_get_backups_dir()
     // If AI1WM defines its own constant, prefer it.
     if (defined('AI1WM_BACKUPS_PATH')) {
         $dir = trailingslashit(AI1WM_BACKUPS_PATH);
-    } else {
+    }
+    else {
         $content_dir = defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
         $dir = trailingslashit($content_dir . DIRECTORY_SEPARATOR . 'ai1wm-backups');
     }
 
     // Ensure .htaccess exists for security
     ai1wm_child_ensure_htaccess($dir);
-    
+
     return $dir;
 }
 
@@ -146,7 +151,7 @@ function ai1wm_child_ensure_htaccess($dir)
     }
 
     $htaccess_file = $dir . '.htaccess';
-    
+
     // Check if .htaccess already exists and has the right content
     if (file_exists($htaccess_file)) {
         $content = file_get_contents($htaccess_file);
@@ -191,7 +196,7 @@ function ai1wm_child_create_backup()
 
     // Get AI1WM secret key for authentication
     $secret_key = get_option('ai1wm_secret_key', '');
-    
+
     // Build the export options as AI1WM expects them
     $export_options = array(
         'action' => 'ai1wm_export',
@@ -216,7 +221,7 @@ function ai1wm_child_create_backup()
     $body = wp_remote_retrieve_body($response);
     $code = wp_remote_retrieve_response_code($response);
     $data = json_decode($body, true);
-    
+
     // AI1WM returns a status file that tracks the export progress
     if (isset($data['status']) || isset($data['progress'])) {
         ai1wm_child_respond(array(
@@ -225,7 +230,7 @@ function ai1wm_child_create_backup()
         ));
         return;
     }
-    
+
     // Check if we got HTTP 200 (even empty body can mean success for async operations)
     if ($code === 200) {
         ai1wm_child_respond(array(
@@ -234,7 +239,7 @@ function ai1wm_child_create_backup()
         ));
         return;
     }
-    
+
     // If we get here, something went wrong
     $error_msg = 'Backup creation failed. HTTP ' . $code;
     if (!empty($body)) {
@@ -328,7 +333,8 @@ function ai1wm_child_delete_backup($file_name)
             'success' => true,
             'data' => 'File "' . $file_name . '" has been deleted.',
         ));
-    } else {
+    }
+    else {
         ai1wm_child_respond_error('Failed to delete the file. Check file permissions.');
     }
 }
@@ -362,7 +368,7 @@ function ai1wm_child_download_backup($file_name)
     // Generate a secure temporary download token (valid for 30 minutes)
     $token = wp_generate_password(32, false);
     $expiry = time() + 1800; // 30 minutes
-    
+
     // Store token in transient
     set_transient('ai1wm_dl_token_' . $token, array(
         'file' => $file_name,
@@ -447,4 +453,3 @@ function ai1wm_child_secure_download_handler()
     readfile($real_file);
     exit;
 }
-

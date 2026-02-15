@@ -3,7 +3,7 @@
  * Plugin Name: MainWP AI1WM Backup Manager
  * Plugin URI:  https://github.com/kinou-p/mainwp-ai1wm-manager
  * Description: Manage All-in-One WP Migration backups on child sites directly from the MainWP Dashboard.
- * Version:     0.2.3
+ * Version:     0.2.4
  * Author:      Alexandre Pommier
  * Author URI:  https://alexandre-pommier.com
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MAINWP_AI1WM_MANAGER_VERSION', '0.2.3');
+define('MAINWP_AI1WM_MANAGER_VERSION', '0.2.4');
 define('MAINWP_AI1WM_MANAGER_FILE', __FILE__);
 define('MAINWP_AI1WM_MANAGER_DIR', plugin_dir_path(__FILE__));
 define('MAINWP_AI1WM_MANAGER_URL', plugin_dir_url(__FILE__));
@@ -50,7 +50,7 @@ add_action('plugins_loaded', function () {
                 __FILE__,
                 'kinou-p/mainwp-ai1wm-manager',
                 'mainwp-ai1wm-manager.zip'
-            );
+                );
         }
     }
 });
@@ -90,7 +90,7 @@ class MainWP_AI1WM_Manager
             array($this, 'render_page')
         );
     }
-    
+
     /**
      * Add to MainWP left menu under Extensions > Backups category
      */
@@ -100,17 +100,17 @@ class MainWP_AI1WM_Manager
         if (!class_exists('\MainWP\Dashboard\MainWP_Menu')) {
             return;
         }
-        
+
         // Add to left menu under Extensions > Backups category
         \MainWP\Dashboard\MainWP_Menu::add_left_menu(
             array(
-                'title'         => __('AI1WM Manager', 'mainwp-ai1wm-manager'),
-                'parent_key'    => 'Extensions-Mainwp-Backups',
-                'slug'          => 'mainwp-ai1wm-manager',
-                'href'          => 'admin.php?page=mainwp-ai1wm-manager',
-                'icon'          => '<i class="cloud icon"></i>',
-                'leftsub_order_level2' => 99,
-            ),
+            'title' => __('AI1WM Manager', 'mainwp-ai1wm-manager'),
+            'parent_key' => 'Extensions-Mainwp-Backups',
+            'slug' => 'mainwp-ai1wm-manager',
+            'href' => 'admin.php?page=mainwp-ai1wm-manager',
+            'icon' => '<i class="cloud icon"></i>',
+            'leftsub_order_level2' => 99,
+        ),
             2
         );
     }
@@ -184,8 +184,9 @@ class MainWP_AI1WM_Manager
             // Method 1: Use MainWP_Connect directly (most reliable for non-licensed extensions).
             if (class_exists('\MainWP\Dashboard\MainWP_DB') && class_exists('\MainWP\Dashboard\MainWP_Connect')) {
                 $method = 'Method 1 (MainWP_Connect)';
-                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using ' . $method);
-                
+                if (defined('WP_DEBUG') && WP_DEBUG)
+                    error_log('[AI1WM Manager] Using ' . $method);
+
                 $website = \MainWP\Dashboard\MainWP_DB::instance()->get_website_by_id($site_id);
                 if ($website) {
                     // Do not pass file path - it causes NOMAINWP error for non-registered extensions
@@ -195,14 +196,16 @@ class MainWP_AI1WM_Manager
                         'extra_execution',
                         $post_data
                     );
-                } else {
+                }
+                else {
                     return array('error' => 'Site ID ' . $site_id . ' not found in MainWP database.');
                 }
             }
             // Method 2: Legacy class names (older MainWP versions).
             elseif (class_exists('MainWP_DB') && class_exists('MainWP_Connect')) {
                 $method = 'Method 2 (Legacy)';
-                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using ' . $method);
+                if (defined('WP_DEBUG') && WP_DEBUG)
+                    error_log('[AI1WM Manager] Using ' . $method);
 
                 $website = MainWP_DB::instance()->get_website_by_id($site_id);
                 if ($website) {
@@ -212,35 +215,38 @@ class MainWP_AI1WM_Manager
                         'extra_execution',
                         $post_data
                     );
-                } else {
+                }
+                else {
                     return array('error' => 'Site ID ' . $site_id . ' not found in MainWP database (legacy).');
                 }
             }
             // Method 3: Fallback to apply_filters.
             else {
                 $method = 'Method 3 (apply_filters)';
-                if (defined('WP_DEBUG') && WP_DEBUG) error_log('[AI1WM Manager] Using ' . $method);
+                if (defined('WP_DEBUG') && WP_DEBUG)
+                    error_log('[AI1WM Manager] Using ' . $method);
 
                 // Do not pass file path - causes NOMAINWP for non-registered extensions
                 // The filter expects: (key, function, website_id, what, post_data)
                 $result = apply_filters(
                     'mainwp_fetchurlauthed',
-                    '',  // Empty key instead of file path
+                    '', // Empty key instead of file path
                     '',
                     $site_id,
                     'extra_execution',
                     $post_data
                 );
             }
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e) {
             $error_message = $e->getMessage();
             error_log('[AI1WM Manager] Exception for site ID ' . $site_id . ': ' . $error_message);
-            
+
             // Helpful context for "NOMAINWP"
             if (strpos($error_message, 'NOMAINWP') !== false) {
-                 $error_message .= ' (MainWP Dashboard verification failed. Ensure the extension is properly registered or the file path is correct.)';
+                $error_message .= ' (MainWP Dashboard verification failed. Ensure the extension is properly registered or the file path is correct.)';
             }
-            
+
             return array('error' => 'MainWP Request Failed: ' . $error_message . ' [Action: ' . $action . '] [Method: ' . $method . ']');
         }
 

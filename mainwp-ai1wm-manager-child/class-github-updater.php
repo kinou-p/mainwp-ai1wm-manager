@@ -41,7 +41,7 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
                 // Check cache first (1 hour expiration)
                 $cache_key = 'github_updater_' . md5($this->username . $this->repository);
                 $cached = get_transient($cache_key);
-                
+
                 if (false !== $cached && is_array($cached)) {
                     $this->github_response = $cached;
                     return $this->github_response;
@@ -72,14 +72,14 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
 
                 $body = wp_remote_retrieve_body($response);
                 $data = json_decode($body, true);
-                
+
                 if (json_last_error() !== JSON_ERROR_NONE) {
                     error_log('GitHub Updater JSON Error: ' . json_last_error_msg());
                     return false;
                 }
 
                 $this->github_response = $data;
-                
+
                 // Cache for 1 hour
                 set_transient($cache_key, $data, HOUR_IN_SECONDS);
             }
@@ -93,17 +93,17 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
                 if ($checked = $transient->checked) {
                     // CRITICAL FIX: Actually fetch repository info
                     $github_data = $this->get_repository_info();
-                    
+
                     if (!$github_data || empty($github_data['tag_name'])) {
                         return $transient; // No update available or GitHub error
                     }
 
                     $this->plugin = get_plugin_data($this->file); // Update plugin data
-                    
+
                     // Normalize version numbers (remove 'v' prefix if present)
                     $github_version = ltrim($github_data['tag_name'], 'v');
                     $current_version = isset($checked[$this->basename]) ? $checked[$this->basename] : '0';
-                    
+
                     $out_of_date = version_compare($github_version, $current_version, 'gt');
 
                     if ($out_of_date) {
@@ -127,7 +127,7 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
                             }
                         }
 
-                        $transient->response[$this->basename] = (object) $plugin;
+                        $transient->response[$this->basename] = (object)$plugin;
                     }
                 }
             }
@@ -165,7 +165,7 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
                         }
                     }
 
-                    return (object) $plugin;
+                    return (object)$plugin;
                 }
             }
             return $result;
@@ -173,25 +173,31 @@ if (!class_exists('MainWP_AI1WM_Github_Updater')) {
 
         public function after_install($response, $hook_extra, $result)
         {
+            // Important: Only run for this specific plugin
+            if (!isset($hook_extra['plugin']) || $hook_extra['plugin'] !== $this->basename) {
+                return $result;
+            }
+
             // Only run for this plugin
             global $wp_filesystem;
-            
+
             $install_directory = plugin_dir_path($this->file);
-            
+
             // Remove old plugin directory first
             if ($wp_filesystem->exists($install_directory)) {
                 $wp_filesystem->delete($install_directory, true);
             }
-            
+
             // Move new version to correct location
             if ($wp_filesystem->move($result['destination'], $install_directory)) {
                 $result['destination'] = $install_directory;
-                
+
                 // Reactivate if it was active
                 if ($this->active) {
                     activate_plugin($this->basename);
                 }
-            } else {
+            }
+            else {
                 // Log error if move failed
                 error_log('GitHub Updater: Failed to move plugin to ' . $install_directory);
             }
